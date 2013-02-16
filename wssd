@@ -1,0 +1,29 @@
+!/bin/bash
+
+# ‌You need to set the WORK_DIR and DAEMON. Then you can copy this file to /etc/init.d so your daemon will be run each time you restart.
+
+WORK_DIR="/path-to-folder-containing-WSSDaemon.exe"
+DAEMON="/path-to-WSSDaemon.exe"
+PIDFILE="/var/run/WSSDaemon.pid"
+USER="root"
+SERVICE_NAME="WSSDaemon"
+
+case "$1" in
+  start)
+    echo "Starting server"
+    mkdir -p "$WORK_DIR"
+    mono-service2 -d:$WORK_DIR -l:$PIDFILE -m:$SERVICE_NAME -n:$SERVICE_NAME $DAEMON
+    ;;
+
+  stop)
+    echo "Stopping server"
+    kill `cat $PIDFILE`
+    ;;
+
+  *)
+    echo "Usage: /etc/init.d/$SERVICE_NAME {start|stop}"
+    exit 1
+    ;;
+esac
+
+exit 0
