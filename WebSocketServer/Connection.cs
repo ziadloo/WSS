@@ -62,11 +62,16 @@ namespace WebSocketServer
 			if (socket.Connected)
 		    {
 			    int bytesRead = socketStream.EndRead(res);
-				byte[] temp = new byte[bytesRead];
-				Array.Copy(message, temp, bytesRead);
-			    startRead(); //listen for new connections again
-				digestIncomingMessage(temp);
+                if (bytesRead > 0)
+                {
+				    byte[] temp = new byte[bytesRead];
+				    Array.Copy(message, temp, bytesRead);
+			        startRead(); //listen for new connections again
+				    digestIncomingMessage(temp);
+                    return;
+                }
 			}
+            ((IConnection)this).Close();
 		}
 		
 		private bool digestIncomingMessage(byte[] _buffer)
@@ -103,6 +108,7 @@ namespace WebSocketServer
 							socketStream.Write(b, 0, b.Length);
 							socketStream.Flush();
 							((ILogger)server).log("Handshake sent");
+                            connected = true;
 							application.AddConnection(this);
 							server.AddConnection(this);
 						}
@@ -189,13 +195,20 @@ namespace WebSocketServer
 		
 		void IConnection.Close()
 		{
-			socket.Close();
-			if (application != null) {
-				application.RemoveConnection(this);
-			}
-			if (application != server) {
-				server.RemoveConnection(this);
-			}
+            if (connected)
+            {
+				connected = false;
+				((ILogger)server).log("Connection is closed");
+                socket.Close();
+                if (application != null)
+                {
+                    application.RemoveConnection(this);
+                }
+                if (application != server)
+                {
+                    server.RemoveConnection(this);
+                }
+            }
 		}
 		#endregion
 	}
@@ -206,4 +219,3 @@ namespace WebSocketServer
 		public byte[] Buffer = new byte[4096];
 	}
 }
-
