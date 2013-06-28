@@ -22,19 +22,20 @@ namespace Base
 {
 	public class Frame
 	{
-        public enum OpCodeType
-        {
-            Continue = 0x0,
-            Text = 0x1,
-            Binary = 0x2,
-            Close = 0x8,
-            Ping = 0x9,
-            Pong = 0xA
-        }
-
+		public enum OpCodeType
+		{
+			Continue = 0x0,
+			Text = 0x1,
+			Binary = 0x2,
+			Close = 0x8,
+			Ping = 0x9,
+			Pong = 0xA
+		}
+		
 		private string message;
 		private byte[] data;
 		private OpCodeType opCode;
+		private IConnection connection;
 		
 		public string Message
 		{
@@ -49,6 +50,12 @@ namespace Base
 		public OpCodeType OpCode
 		{
 			get { return opCode; }
+		}
+		
+		public IConnection Connection
+		{
+			get { return connection; }
+			set { connection = value; }
 		}
 		
 		public Frame(string msg)
@@ -70,4 +77,3 @@ namespace Base
 		}
 	}
 }
-

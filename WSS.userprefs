@@ -1,8 +1,10 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Base/Application.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="WebSocketServer\Connection.cs">
     <Files>
-      <File FileName="Base/Application.cs" Line="36" Column="33" />
+      <File FileName="Base\Application.cs" Line="36" Column="33" />
+      <File FileName="Base\Frame.cs" Line="80" Column="1" />
+      <File FileName="WebSocketServer\Connection.cs" Line="223" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
