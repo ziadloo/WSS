@@ -50,7 +50,8 @@ namespace Base
 		
 		public void AddConnection(IConnection client)
 		{
-			lock (((ICollection)newlyConnected).SyncRoot) {
+			lock (((ICollection)newlyConnected).SyncRoot)
+			{
 				newlyConnected.Add(client);
 			}
 			jobToDo.Set();
@@ -58,7 +59,8 @@ namespace Base
 
 		public void RemoveConnection(IConnection client)
 		{
-			lock (((ICollection)newlyDisconnected).SyncRoot) {
+			lock (((ICollection)newlyDisconnected).SyncRoot)
+			{
 				newlyDisconnected.Add(client);
 			}
 			jobToDo.Set();
@@ -77,7 +79,8 @@ namespace Base
 		
 		public void EnqueueIncomingFrame(Frame frame)
 		{
-			lock (((ICollection)incomingFrames).SyncRoot) {
+			lock (((ICollection)incomingFrames).SyncRoot)
+			{
 				incomingFrames.Enqueue(frame);
 			}
 			jobToDo.Set();
@@ -92,63 +95,96 @@ namespace Base
 			while (WaitHandle.WaitAny(exitOrNew) == 0)
 			{
 				int count = 0;
-				lock (((ICollection)newlyConnected).SyncRoot) {
+				lock (((ICollection)newlyConnected).SyncRoot)
+				{
 					count += newlyConnected.Count;
 				}
-				lock (((ICollection)newlyDisconnected).SyncRoot) {
+				lock (((ICollection)newlyDisconnected).SyncRoot)
+				{
 					count += newlyDisconnected.Count;
 				}
-				lock (((ICollection)incomingFrames).SyncRoot) {
+				lock (((ICollection)incomingFrames).SyncRoot)
+				{
 					count += incomingFrames.Count;
 				}
 				
 				while (count > 0) {
 					List<IConnection> newConnectionList = new List<IConnection>();
-					lock (((ICollection)newlyConnected).SyncRoot) {
-						foreach (IConnection con in newlyConnected) {
+					lock (((ICollection)newlyConnected).SyncRoot)
+					{
+						foreach (IConnection con in newlyConnected)
+						{
 							newConnectionList.Add(con);
 						}
 						newlyConnected.Clear();
 					}
-					foreach (IConnection con in newConnectionList) {
-						if (!connections.Contains(con)) {
-							connections.Add(con);
-							OnConnect(con);
+					List<IConnection> newConnectionList2 = new List<IConnection>();
+					lock (((ICollection)connections).SyncRoot)
+					{
+						foreach (IConnection con in newConnectionList)
+						{
+							if (!connections.Contains(con))
+							{
+								connections.Add(con);
+								newConnectionList2.Add(con);
+							}
 						}
+					}
+					foreach (IConnection con in newConnectionList2)
+					{
+						OnConnect(con);
 					}
 					
 					List<IConnection> removedConnectionList = new List<IConnection>();
-					lock (((ICollection)newlyDisconnected).SyncRoot) {
-						foreach (IConnection con in newlyDisconnected) {
+					lock (((ICollection)newlyDisconnected).SyncRoot)
+					{
+						foreach (IConnection con in newlyDisconnected)
+						{
 							removedConnectionList.Add(con);
 						}
 						newlyDisconnected.Clear();
 					}
-					foreach (IConnection con in removedConnectionList) {
-						if (connections.Contains(con)) {
-							connections.Remove(con);
-							OnDisconnect(con);
+					List<IConnection> removedConnectionList2 = new List<IConnection>();
+					lock (((ICollection)connections).SyncRoot)
+					{
+						foreach (IConnection con in removedConnectionList)
+						{
+							if (connections.Contains(con))
+							{
+								connections.Remove(con);
+								removedConnectionList2.Add(con);
+							}
 						}
+					}
+					foreach (IConnection con in removedConnectionList2)
+					{
+						OnDisconnect(con);
 					}
 	
 					Queue<Frame> frameQueue = new Queue<Frame>();
-					lock (((ICollection)incomingFrames).SyncRoot) {
-						while (incomingFrames.Count > 0) {
+					lock (((ICollection)incomingFrames).SyncRoot)
+					{
+						while (incomingFrames.Count > 0)
+						{
 							frameQueue.Enqueue(incomingFrames.Dequeue());
 						}
 					}
-					while (frameQueue.Count > 0) {
+					while (frameQueue.Count > 0)
+					{
 						OnData(frameQueue.Dequeue());
 					}
 					
 					count = 0;
-					lock (((ICollection)newlyConnected).SyncRoot) {
+					lock (((ICollection)newlyConnected).SyncRoot)
+					{
 						count += newlyConnected.Count;
 					}
-					lock (((ICollection)newlyDisconnected).SyncRoot) {
+					lock (((ICollection)newlyDisconnected).SyncRoot)
+					{
 						count += newlyDisconnected.Count;
 					}
-					lock (((ICollection)incomingFrames).SyncRoot) {
+					lock (((ICollection)incomingFrames).SyncRoot)
+					{
 						count += incomingFrames.Count;
 					}
 				}

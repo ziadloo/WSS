@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using System.Net;
 using WebSocketServer.Drafts;
 using System.Threading.Tasks;
+using System.Collections;
 
 namespace WebSocketServer
 {
@@ -44,7 +45,6 @@ namespace WebSocketServer
 		public Server(ILogger l)
 		{
 			logger = l;
-			connections = new List<IConnection>();
 			applications = new Dictionary<string, Application>();
 			
 			string serverFolder = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -64,37 +64,22 @@ namespace WebSocketServer
 					}
 				}
 			}
-			
+
 			drafts = new Draft[2];
 			drafts[0] = new Draft10();
 			drafts[1] = new Draft17();
 		}
 		
-//		private void ListenForClients()
-//		{
-//			tcpListener.Start();
-//			
-//			while (loop)
-//			{
-//				//blocks until a client has connected to the server
-//				try {
-//					TcpClient client = tcpListener.AcceptTcpClient();
-//					if (client != null) {
-//						new Connection(client, this);
-//					}
-//				}
-//				catch {
-//				}
-//			}
-//		}
-
 		public Application getApplication (string path)
 		{
-			if (applications.ContainsKey(path)) {
-				return applications[path];
-			}
-			else {
-				return null;
+			lock (((ICollection)applications).SyncRoot)
+			{
+				if (applications.ContainsKey(path)) {
+					return applications[path];
+				}
+				else {
+					return null;
+				}
 			}
 		}
 
@@ -133,8 +118,12 @@ namespace WebSocketServer
 		#region implemented abstract members of Base.Application
 		public override void Start()
 		{
-			foreach (Application app in applications.Values) {
-				app.Start();
+			lock (((ICollection)applications).SyncRoot)
+			{
+				foreach (Application app in applications.Values)
+				{
+					app.Start();
+				}
 			}
 			tcpListener = new TcpListener(IPAddress.Any, 8080);
 			
@@ -163,11 +152,17 @@ namespace WebSocketServer
 		
 		public override void Stop()
 		{
-			foreach (IConnection con in connections) {
-				con.Close();
+			lock (((ICollection)connections).SyncRoot)
+			{
+				foreach (IConnection con in connections) {
+					con.Close();
+				}
 			}
-			foreach (Application app in applications.Values) {
-				app.Stop();
+			lock (((ICollection)applications).SyncRoot)
+			{
+				foreach (Application app in applications.Values) {
+					app.Stop();
+				}
 			}
 			base.Stop();
 			tcpListener.Stop();

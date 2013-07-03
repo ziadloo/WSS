@@ -48,7 +48,7 @@ namespace WebSocketServer
 			this.socket = socket;
 			this.server = server;
 			socketStream = socket.GetStream();
-			
+				
 			startRead();
 		}
 		
@@ -60,18 +60,18 @@ namespace WebSocketServer
 		private void handleAsyncRead(IAsyncResult res)
 		{
 			if (socket.Connected)
-			{
-				int bytesRead = socketStream.EndRead(res);
-				if (bytesRead > 0)
-				{
-					byte[] temp = new byte[bytesRead];
-					Array.Copy(message, temp, bytesRead);
-					startRead(); //listen for new connections again
-					digestIncomingMessage(temp);
-					return;
-				}
+		    {
+			    int bytesRead = socketStream.EndRead(res);
+                if (bytesRead > 0)
+                {
+				    byte[] temp = new byte[bytesRead];
+				    Array.Copy(message, temp, bytesRead);
+			        startRead(); //listen for new connections again
+				    digestIncomingMessage(temp);
+                    return;
+                }
 			}
-			((IConnection)this).Close();
+            ((IConnection)this).Close();
 		}
 		
 		private bool digestIncomingMessage(byte[] _buffer)
@@ -96,7 +96,8 @@ namespace WebSocketServer
 								application = server;
 							}
 							else {
-								application = server.getApplication(header.URL.Substring(1));
+								string appName = header.URL.Substring(1);
+								application = server.getApplication(appName);
 								if (application == null) {
 									((ILogger)server).log("Invalid application: " + header.URL);
 									sendHttpResponse(404);
@@ -108,7 +109,7 @@ namespace WebSocketServer
 							socketStream.Write(b, 0, b.Length);
 							socketStream.Flush();
 							((ILogger)server).log("Handshake sent");
-							connected = true;
+                            connected = true;
 							application.AddConnection(this);
 							server.AddConnection(this);
 						}
@@ -124,7 +125,7 @@ namespace WebSocketServer
 							break;
 						}
 						if (application != null) {
-							f.Connection = this;
+                            f.Connection = this;
 							application.EnqueueIncomingFrame(f);
 						}
 					}
@@ -140,24 +141,24 @@ namespace WebSocketServer
 		{
 			string httpHeader = "HTTP/1.1 ";
 			switch (httpStatusCode) {
-			case 400:
-				httpHeader += "400 Bad Request";
+				case 400:
+					httpHeader += "400 Bad Request";
 				break;
-				
-			case 401:
-				httpHeader += "401 Unauthorized";
+			
+				case 401:
+					httpHeader += "401 Unauthorized";
 				break;
-				
-			case 403:
-				httpHeader += "403 Forbidden";
+			
+				case 403:
+					httpHeader += "403 Forbidden";
 				break;
-				
-			case 404:
-				httpHeader += "404 Not Found";
+			
+				case 404:
+					httpHeader += "404 Not Found";
 				break;
-				
-			case 501:
-				httpHeader += "501 Not Implemented";
+			
+				case 501:
+					httpHeader += "501 Not Implemented";
 				break;
 			}
 			httpHeader += "\r\n";
@@ -166,7 +167,7 @@ namespace WebSocketServer
 			socketStream.Write(b, 0, b.Length);
 			socketStream.Flush();
 		}
-		
+
 		#region IConnection implementation
 		void IConnection.Send(Frame frame)
 		{
@@ -175,19 +176,19 @@ namespace WebSocketServer
 				socketStream.BeginWrite(b, 0, b.Length, null, null);
 			}
 		}
-		
+
 		string IConnection.IP {
 			get {
 				return ((IPEndPoint)(socket.Client.RemoteEndPoint)).Address.ToString();
 			}
 		}
-		
+
 		int IConnection.Port {
 			get {
 				return ((IPEndPoint)(socket.Client.RemoteEndPoint)).Port;
 			}
 		}
-		
+
 		bool IConnection.Connected {
 			get {
 				return connected && socket.Connected;
@@ -196,22 +197,22 @@ namespace WebSocketServer
 		
 		void IConnection.Close()
 		{
-			if (connected)
-			{
+            if (connected)
+            {
 				connected = false;
 				((ILogger)server).log("Connection is closed");
-				socket.Close();
-				if (application != null)
-				{
-					application.RemoveConnection(this);
-				}
-				if (application != server)
-				{
-					server.RemoveConnection(this);
-				}
-			}
+                socket.Close();
+                if (application != null)
+                {
+                    application.RemoveConnection(this);
+                }
+                if (application != server)
+                {
+                    server.RemoveConnection(this);
+                }
+            }
 		}
-#endregion
+		#endregion
 	}
 	
 	class ReadBuffer
