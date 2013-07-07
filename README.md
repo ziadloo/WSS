@@ -25,9 +25,9 @@ section in this file in order to learn how to do this.
 Installing the project as a Daemon in Lunix:
 --------------------------------------------
 
-	0. For these steps to work you will need "mono-service2", so install that first.
+	0. For these steps to work you will need "mono-service", so install that first.
 
-	1. Copy the release files to some location. Don't forget the "Applications" folder and its files. g.e. /usr/bin or /usr/sbin
+	1. Copy the release files to some location. Don't forget the "Applications" folder and its files. e.g. /usr/bin or /usr/sbin
 	
 	2. Copy the "wssd" script file to /etc/init.d. You can find it in the project's root. You also need to amend some paths in it.
 	

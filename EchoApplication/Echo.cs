@@ -33,8 +33,10 @@ namespace EchoApplication
 		#region implemented abstract members of Base.Application
 		public override void OnData(Frame frame)
 		{
-			if (frame.OpCode == Frame.OpCodeType.Text) {
-				foreach (IConnection con in connections) {
+			if (frame.OpCode == Frame.OpCodeType.Text)
+			{
+				foreach (IConnection con in connections)
+				{
 					con.Send(frame);
 				}
 			}

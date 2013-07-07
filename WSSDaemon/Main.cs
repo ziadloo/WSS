@@ -26,20 +26,32 @@ namespace WSSDaemon
 {
 	class MainClass : ServiceBase, ILogger
 	{
+		const string SERVICE_NAME = "WSSDaemon";
+		const string LOG_NAME = "Application";
+
 		private System.Diagnostics.EventLog eventLog;
 		private Server server;
 		
-		public static void Main (string[] args)
+		public static void Main(string[] args)
 		{
-			Console.WriteLine ("Hello World!");
+			ServiceBase[] services;
+
+			services = new ServiceBase[] { new MainClass() };
+			ServiceBase.Run(services);
 		}
 		
 		public MainClass()
 		{
-			this.ServiceName = "MehranService";
+			this.ServiceName = SERVICE_NAME;
+
+			if (!System.Diagnostics.EventLog.SourceExists(this.ServiceName))
+			{
+				System.Diagnostics.EventLog.CreateEventSource(this.ServiceName, LOG_NAME);
+			}
+
 			this.eventLog = new EventLog();
 			this.eventLog.Source = this.ServiceName;
-			this.eventLog.Log = "Application";
+			this.eventLog.Log = LOG_NAME;
 
 			((System.ComponentModel.ISupportInitialize)(this.eventLog)).BeginInit();
 			if (!EventLog.SourceExists(this.eventLog.Source))
@@ -54,20 +66,14 @@ namespace WSSDaemon
 		protected override void OnStart(string[] args)
 		{
 			base.OnStart(args);
-			
-			//TODO: place your start code here
-			eventLog.WriteEntry("Starting MehranService...", EventLogEntryType.Information);
-			
+			eventLog.WriteEntry("Starting " + SERVICE_NAME + "...", EventLogEntryType.Information);
 			server.Start();
 		}
 		
 		protected override void OnStop()
 		{
 			base.OnStop();
-			
-			//TODO: clean up any variables and stop any threads
-			eventLog.WriteEntry("Stopping MehranService...", System.Diagnostics.EventLogEntryType.Information);
-			
+			eventLog.WriteEntry("Stopping " + SERVICE_NAME + "...", System.Diagnostics.EventLogEntryType.Information);
 			server.Stop();
 		}
 

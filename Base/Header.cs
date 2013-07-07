@@ -25,48 +25,53 @@ namespace Base
 	{
 		private Dictionary<string, string> entries = new Dictionary<string, string>();
 		private string url;
-		
+
 		public string URL
 		{
 			get { return url; }
 		}
-		
+
 		public Header(string url)
 		{
 			this.url = url;
 		}
-		
+
 		public void Set(string name, string value)
 		{
 			name = name.ToLower();
-			if (entries.ContainsKey(name)) {
+			if (entries.ContainsKey(name))
+			{
 				entries[name] = value;
 			}
-			else {
+			else
+			{
 				entries.Add(name, value);
 			}
 		}
-		
+
 		public string Get(string name)
 		{
 			name = name.ToLower();
-			if (entries.ContainsKey(name)) {
+			if (entries.ContainsKey(name))
+			{
 				return entries[name];
 			}
-			else {
+			else
+			{
 				return null;
 			}
 		}
-		
+
 		public override string ToString()
 		{
 			string buffer = url + "\r\n";
-			foreach (KeyValuePair<string, string> item in entries) {
+			foreach (KeyValuePair<string, string> item in entries)
+			{
 				buffer += item.Key + ": " + item.Value + "\r\n";
 			}
 			return buffer + "\r\n";
 		}
-		
+
 		public byte[] ToBytes()
 		{
 			return System.Text.Encoding.UTF8.GetBytes(ToString());

@@ -30,7 +30,8 @@ namespace WebSocketServer.Drafts
 			Header h = _parseHandshake(buffer, ref bufferUsed);
 			string v = h.Get("Sec-WebSocket-Version");
 			int vv = Int32.Parse(v.Trim());
-			if (vv != 13) {
+			if (vv != 13)
+			{
 				throw new Exception();
 			}
 			buffer.RemoveRange(0, bufferUsed);

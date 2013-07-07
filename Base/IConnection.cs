@@ -22,8 +22,8 @@ namespace Base
 {
 	public interface IConnection
 	{
-        string IP { get; }
-        int Port { get; }
+		string IP { get; }
+		int Port { get; }
 		bool Connected { get; }
 		void Send(Frame frame);
 		void Close();

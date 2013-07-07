@@ -27,20 +27,25 @@ namespace WebSocketServer.Drafts
 	{
 		protected string ReadOneLine(List<byte> buffer, int start = 0)
 		{
-			if (buffer.Count - start < 2) {
+			if (buffer.Count - start < 2)
+			{
 				return null;
 			}
 			int end = start;
-			for (int i=start+1; i<buffer.Count; i++) {
-				if (buffer[i-1] == '\r' && buffer[i] == '\n') {
+			for (int i=start+1; i<buffer.Count; i++)
+			{
+				if (buffer[i-1] == '\r' && buffer[i] == '\n')
+				{
 					end = i;
 					break;
 				}
 			}
-			if (end == start) {
+			if (end == start)
+			{
 				return null;
 			}
-			else {
+			else
+			{
 				ASCIIEncoding encoder = new ASCIIEncoding();
 				return encoder.GetString(buffer.ToArray(), start, end - start - 1);
 			}

@@ -49,14 +49,18 @@ namespace WebSocketServer
 			
 			string serverFolder = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 			string applicationfolder = Path.Combine(serverFolder, "Applications");
-			if (Directory.Exists(applicationfolder)) {
+			if (Directory.Exists(applicationfolder))
+			{
 				Type abstractType = typeof(Application);
 				string[] dllpaths = Directory.GetFiles(applicationfolder, "*.dll");
-				foreach (string dllpath in dllpaths) {
+				foreach (string dllpath in dllpaths)
+				{
 					Assembly dll = Assembly.LoadFile(dllpath);
 					Type[] types = dll.GetExportedTypes();
-					foreach (Type type in types) {
-						if (abstractType.IsAssignableFrom(type)) {
+					foreach (Type type in types)
+					{
+						if (abstractType.IsAssignableFrom(type))
+						{
 							Application obj = (Application)Activator.CreateInstance(type);
 							obj.SetLogger(logger);
 							applications.Add(Path.GetFileNameWithoutExtension(dllpath), obj);
@@ -74,10 +78,12 @@ namespace WebSocketServer
 		{
 			lock (((ICollection)applications).SyncRoot)
 			{
-				if (applications.ContainsKey(path)) {
+				if (applications.ContainsKey(path))
+				{
 					return applications[path];
 				}
-				else {
+				else
+				{
 					return null;
 				}
 			}
@@ -132,19 +138,20 @@ namespace WebSocketServer
 			
 			base.Start();
 		}
-		
+
 		private void startAccept()
 		{
 		    tcpListener.BeginAcceptTcpClient(handleAsyncConnection, tcpListener);
 		}
-		
+
 		private void handleAsyncConnection(IAsyncResult res)
 		{
 			if (tcpListener.Server.IsBound)
-		    {
-			    startAccept(); //listen for new connections again
-			    TcpClient client = tcpListener.EndAcceptTcpClient(res);
-				if (client != null) {
+			{
+				startAccept(); //listen for new connections again
+				TcpClient client = tcpListener.EndAcceptTcpClient(res);
+				if (client != null)
+				{
 					new Connection(client, this);
 				}
 			}
@@ -154,13 +161,15 @@ namespace WebSocketServer
 		{
 			lock (((ICollection)connections).SyncRoot)
 			{
-				foreach (IConnection con in connections) {
+				foreach (IConnection con in connections)
+				{
 					con.Close();
 				}
 			}
 			lock (((ICollection)applications).SyncRoot)
 			{
-				foreach (Application app in applications.Values) {
+				foreach (Application app in applications.Values)
+				{
 					app.Stop();
 				}
 			}

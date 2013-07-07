@@ -47,7 +47,7 @@ namespace Base
 		{
 			this.logger = logger;
 		}
-		
+
 		public void AddConnection(IConnection client)
 		{
 			lock (((ICollection)newlyConnected).SyncRoot)
@@ -65,18 +65,18 @@ namespace Base
 			}
 			jobToDo.Set();
 		}
-		
+
 		public virtual void Start()
 		{
 			exitEvent.Reset();
 			dispatchThread.Start();
 		}
-		
+
 		public virtual void Stop()
 		{
 			exitEvent.Set();
 		}
-		
+
 		public void EnqueueIncomingFrame(Frame frame)
 		{
 			lock (((ICollection)incomingFrames).SyncRoot)
@@ -85,7 +85,7 @@ namespace Base
 			}
 			jobToDo.Set();
 		}
-		
+
 		protected virtual void dispatchFrames()
 		{
 			WaitHandle[] exitOrNew = new WaitHandle[2];
@@ -107,8 +107,9 @@ namespace Base
 				{
 					count += incomingFrames.Count;
 				}
-				
-				while (count > 0) {
+
+				while (count > 0)
+				{
 					List<IConnection> newConnectionList = new List<IConnection>();
 					lock (((ICollection)newlyConnected).SyncRoot)
 					{
@@ -173,7 +174,7 @@ namespace Base
 					{
 						OnData(frameQueue.Dequeue());
 					}
-					
+
 					count = 0;
 					lock (((ICollection)newlyConnected).SyncRoot)
 					{

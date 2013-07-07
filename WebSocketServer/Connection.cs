@@ -40,9 +40,8 @@ namespace WebSocketServer
 		private Header header;
 		private Draft draft;
 		private List<byte> buffer = new List<byte>();
-		
 		private byte[] message = new byte[4096];
-		
+
 		public Connection(TcpClient socket, Server server)
 		{
 			this.socket = socket;
@@ -51,54 +50,63 @@ namespace WebSocketServer
 				
 			startRead();
 		}
-		
+
 		private void startRead()
 		{
 			socketStream.BeginRead(message, 0, message.Length, handleAsyncRead, socketStream);
 		}
-		
+
 		private void handleAsyncRead(IAsyncResult res)
 		{
 			if (socket.Connected)
-		    {
-			    int bytesRead = socketStream.EndRead(res);
-                if (bytesRead > 0)
-                {
-				    byte[] temp = new byte[bytesRead];
-				    Array.Copy(message, temp, bytesRead);
-			        startRead(); //listen for new connections again
-				    digestIncomingMessage(temp);
-                    return;
-                }
+			{
+				int bytesRead = socketStream.EndRead(res);
+				if (bytesRead > 0)
+				{
+					byte[] temp = new byte[bytesRead];
+					Array.Copy(message, temp, bytesRead);
+					startRead(); //listen for new connections again
+					digestIncomingMessage(temp);
+					return;
+				}
 			}
-            ((IConnection)this).Close();
+			((IConnection)this).Close();
 		}
-		
+
 		private bool digestIncomingMessage(byte[] _buffer)
 		{
-			if (_buffer.Length == 0) {
+			if (_buffer.Length == 0)
+			{
 				//the client has disconnected from the server
 				return false;
 			}
 			
 			//message has successfully been received
-			try {
-				for (int i=0; i<_buffer.Length; i++) {
+			try
+			{
+				for (int i=0; i<_buffer.Length; i++)
+				{
 					buffer.Add(_buffer[i]);
 				}
-				if (draft == null) {
-					foreach (Draft d in server.Drafts) {
-						try {
+				if (draft == null)
+				{
+					foreach (Draft d in server.Drafts)
+					{
+						try
+						{
 							header = d.ParseHandshake(buffer);
 							draft = d;
 							
-							if (header.URL == "/") {
+							if (header.URL == "/")
+							{
 								application = server;
 							}
-							else {
+							else
+							{
 								string appName = header.URL.Substring(1);
 								application = server.getApplication(appName);
-								if (application == null) {
+								if (application == null)
+								{
 									((ILogger)server).log("Invalid application: " + header.URL);
 									sendHttpResponse(404);
 									((IConnection)this).Close();
@@ -109,38 +117,45 @@ namespace WebSocketServer
 							socketStream.Write(b, 0, b.Length);
 							socketStream.Flush();
 							((ILogger)server).log("Handshake sent");
-                            connected = true;
+							connected = true;
 							application.AddConnection(this);
 							server.AddConnection(this);
 						}
-						catch {
+						catch
+						{
 						}
 					}
 				}
-				if (draft != null) {
+				if (draft != null)
+				{
 					Frame f;
-					while ((f = draft.ParseFrameBytes(buffer)) != null) {
-						if (f.OpCode == Frame.OpCodeType.Close) {
+					while ((f = draft.ParseFrameBytes(buffer)) != null)
+					{
+						if (f.OpCode == Frame.OpCodeType.Close)
+						{
 							((IConnection)this).Close();
 							break;
 						}
-						if (application != null) {
-                            f.Connection = this;
+						if (application != null)
+						{
+							f.Connection = this;
 							application.EnqueueIncomingFrame(f);
 						}
 					}
 				}
 			}
-			catch {
+			catch
+			{
 			}
 			
 			return true;
 		}
-		
+
 		public void sendHttpResponse(int httpStatusCode = 400)
 		{
 			string httpHeader = "HTTP/1.1 ";
-			switch (httpStatusCode) {
+			switch (httpStatusCode)
+			{
 				case 400:
 					httpHeader += "400 Bad Request";
 				break;
@@ -172,45 +187,52 @@ namespace WebSocketServer
 		void IConnection.Send(Frame frame)
 		{
 			byte[] b = draft.CreateFrameBytes(frame);
-			if (b != null) {
+			if (b != null)
+			{
 				socketStream.BeginWrite(b, 0, b.Length, null, null);
 			}
 		}
 
-		string IConnection.IP {
-			get {
+		string IConnection.IP
+		{
+			get
+			{
 				return ((IPEndPoint)(socket.Client.RemoteEndPoint)).Address.ToString();
 			}
 		}
 
-		int IConnection.Port {
-			get {
+		int IConnection.Port
+		{
+			get
+			{
 				return ((IPEndPoint)(socket.Client.RemoteEndPoint)).Port;
 			}
 		}
 
-		bool IConnection.Connected {
-			get {
+		bool IConnection.Connected
+		{
+			get
+			{
 				return connected && socket.Connected;
 			}
 		}
 		
 		void IConnection.Close()
 		{
-            if (connected)
-            {
+			if (connected)
+			{
 				connected = false;
 				((ILogger)server).log("Connection is closed");
-                socket.Close();
-                if (application != null)
-                {
-                    application.RemoveConnection(this);
-                }
-                if (application != server)
-                {
-                    server.RemoveConnection(this);
-                }
-            }
+				socket.Close();
+				if (application != null)
+				{
+					application.RemoveConnection(this);
+				}
+				if (application != server)
+				{
+					server.RemoveConnection(this);
+				}
+			}
 		}
 		#endregion
 	}

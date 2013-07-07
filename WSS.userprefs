@@ -1,11 +1,20 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="WebSocketServer/Connection.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="WebSocketServer/Server.cs">
     <Files>
-      <File FileName="WebSocketServer/Server.cs" Line="128" Column="53" />
-      <File FileName="WebSocketServer/Connection.cs" Line="114" Column="19" />
-      <File FileName="Base/Frame.cs" Line="55" Column="38" />
+      <File FileName="WebSocketServer/Server.cs" Line="134" Column="53" />
     </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State expanded="True" selected="True" />
+      </Pad>
+      <Pad Id="ClassPad">
+        <State expanded="True" selected="True" />
+      </Pad>
+      <Pad Id="MonoDevelop.Debugger.WatchPad">
+        <State />
+      </Pad>
+    </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore />
