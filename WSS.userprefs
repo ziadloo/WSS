@@ -1,12 +1,14 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Linux_Debug" />
   <MonoDevelop.Ide.Workbench ActiveDocument="WebSocketServer/Server.cs">
     <Files>
-      <File FileName="WebSocketServer/Server.cs" Line="134" Column="53" />
+      <File FileName="WebSocketServer/Server.cs" Line="33" Column="44" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
-        <State expanded="True" selected="True" />
+        <State expanded="True">
+          <Node name="EchoApplication" selected="True" />
+        </State>
       </Pad>
       <Pad Id="ClassPad">
         <State expanded="True" selected="True" />
