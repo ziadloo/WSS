@@ -36,6 +36,7 @@ namespace WebSocketServer
 		private TcpListener tcpListener;
 		private bool _checkOrigin = false;
 		private Draft[] drafts;
+		private bool exitEvent = false;
 		
 		public Draft[] Drafts
 		{
@@ -74,7 +75,7 @@ namespace WebSocketServer
 			drafts[1] = new Draft17();
 		}
 		
-		public Application getApplication (string path)
+		public Application getApplication(string path)
 		{
 			lock (((ICollection)applications).SyncRoot)
 			{
@@ -131,6 +132,7 @@ namespace WebSocketServer
 					app.Start();
 				}
 			}
+			exitEvent = false;
 			tcpListener = new TcpListener(IPAddress.Any, 8080);
 			
 			tcpListener.Start();
@@ -141,19 +143,46 @@ namespace WebSocketServer
 
 		private void startAccept()
 		{
-		    tcpListener.BeginAcceptTcpClient(handleAsyncConnection, tcpListener);
+			try
+			{
+				if (!exitEvent)
+				{
+					tcpListener.BeginAcceptTcpClient(handleAsyncConnection, tcpListener);
+				}
+			}
+			catch (Exception ex)
+			{
+				int count = 0;
+				lock (((ICollection)connections).SyncRoot)
+				{
+					count = connections.Count;
+				}
+				logger.error("Begining accepting a client failed. Number of connections: " + count.ToString() + ". Error message: " + ex.Message);
+			}
 		}
 
 		private void handleAsyncConnection(IAsyncResult res)
 		{
-			if (tcpListener.Server.IsBound)
+			try
 			{
-				startAccept(); //listen for new connections again
-				TcpClient client = tcpListener.EndAcceptTcpClient(res);
-				if (client != null)
+				if (!exitEvent)
 				{
-					new Connection(client, this);
+					startAccept(); //listen for new connections again
+					TcpClient client = tcpListener.EndAcceptTcpClient(res);
+					if (client != null)
+					{
+						new Connection(client, this);
+					}
 				}
+			}
+			catch (Exception ex)
+			{
+				int count = 0;
+				lock (((ICollection)connections).SyncRoot)
+				{
+					count = connections.Count;
+				}
+				logger.error("Accepting a client failed. Number of connections: " + count.ToString() + ". Error message: " + ex.Message);
 			}
 		}
 		
@@ -173,6 +202,7 @@ namespace WebSocketServer
 					app.Stop();
 				}
 			}
+			exitEvent = true;
 			base.Stop();
 			tcpListener.Stop();
 		}

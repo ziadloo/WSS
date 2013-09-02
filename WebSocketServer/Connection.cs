@@ -58,19 +58,35 @@ namespace WebSocketServer
 
 		private void handleAsyncRead(IAsyncResult res)
 		{
-			if (socket.Connected)
+			try
 			{
-				int bytesRead = socketStream.EndRead(res);
-				if (bytesRead > 0)
+				if (socket.Connected)
 				{
-					byte[] temp = new byte[bytesRead];
-					Array.Copy(message, temp, bytesRead);
-					startRead(); //listen for new connections again
-					digestIncomingMessage(temp);
-					return;
+					int bytesRead = socketStream.EndRead(res);
+					if (bytesRead > 0)
+					{
+						byte[] temp = new byte[bytesRead];
+						Array.Copy(message, temp, bytesRead);
+						startRead(); //listen for new connections again
+						digestIncomingMessage(temp);
+						return;
+					}
+				}
+				((IConnection)this).Close();
+			}
+			catch (Exception ex)
+			{
+				((ILogger)server).error("Reading from client failed. Removing the client from list. Error message: " + ex.Message);
+
+				if (application != null)
+				{
+					application.RemoveConnection(this);
+				}
+				if (application != server)
+				{
+					server.RemoveConnection(this);
 				}
 			}
-			((IConnection)this).Close();
 		}
 
 		private bool digestIncomingMessage(byte[] _buffer)
@@ -103,7 +119,10 @@ namespace WebSocketServer
 							}
 							else
 							{
-								string appName = header.URL.Substring(1);
+								Regex regex = new Regex("/?([^/\\?\\*\\+\\\\]+)[/\\?]?.*");
+								Match mtch = regex.Match(header.URL);
+								string appName = mtch.Groups[1].Value;
+
 								application = server.getApplication(appName);
 								if (application == null)
 								{
@@ -116,7 +135,9 @@ namespace WebSocketServer
 							byte[] b = d.CreateResponseHandshake(header);
 							socketStream.Write(b, 0, b.Length);
 							socketStream.Flush();
+#if LOGGER
 							((ILogger)server).log("Handshake sent");
+#endif
 							connected = true;
 							application.AddConnection(this);
 							server.AddConnection(this);
@@ -186,10 +207,26 @@ namespace WebSocketServer
 		#region IConnection implementation
 		void IConnection.Send(Frame frame)
 		{
-			byte[] b = draft.CreateFrameBytes(frame);
-			if (b != null)
+			try
 			{
-				socketStream.BeginWrite(b, 0, b.Length, null, null);
+				byte[] b = draft.CreateFrameBytes(frame);
+				if (b != null)
+				{
+					socketStream.BeginWrite(b, 0, b.Length, null, null);
+				}
+			}
+			catch (Exception ex)
+			{
+				((ILogger)server).error("Writing to client failed. Removing the client from list. Error message: " + ex.Message);
+
+				if (application != null)
+				{
+					application.RemoveConnection(this);
+				}
+				if (application != server)
+				{
+					server.RemoveConnection(this);
+				}
 			}
 		}
 
@@ -222,7 +259,9 @@ namespace WebSocketServer
 			if (connected)
 			{
 				connected = false;
+#if LOGGER
 				((ILogger)server).log("Connection is closed");
+#endif
 				socket.Close();
 				if (application != null)
 				{

@@ -35,10 +35,7 @@ namespace EchoApplication
 		{
 			if (frame.OpCode == Frame.OpCodeType.Text)
 			{
-				foreach (IConnection con in connections)
-				{
-					con.Send(frame);
-				}
+				frame.Connection.Send(frame);
 			}
 		}
 
