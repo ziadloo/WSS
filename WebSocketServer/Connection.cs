@@ -32,15 +32,15 @@ namespace WebSocketServer
 {
 	public class Connection : IConnection
 	{
-		private TcpClient socket;
-		private NetworkStream socketStream;
-		private bool connected = false;
-		private Server server;
-		private Application application;
-		private Header header;
-		private Draft draft;
-		private List<byte> buffer = new List<byte>();
-		private byte[] message = new byte[4096];
+		protected TcpClient socket;
+		protected NetworkStream socketStream;
+		protected bool connected = false;
+		protected Server server;
+		protected Application application;
+		protected Header header;
+		protected Draft draft;
+		protected List<byte> buffer = new List<byte>();
+		protected byte[] message = new byte[4096];
 
 		public Connection(TcpClient socket, Server server)
 		{
@@ -51,12 +51,12 @@ namespace WebSocketServer
 			startRead();
 		}
 
-		private void startRead()
+		protected virtual void startRead()
 		{
 			socketStream.BeginRead(message, 0, message.Length, handleAsyncRead, socketStream);
 		}
 
-		private void handleAsyncRead(IAsyncResult res)
+		protected void handleAsyncRead(IAsyncResult res)
 		{
 			try
 			{

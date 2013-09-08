@@ -37,22 +37,22 @@ namespace WSSConsole
 		#region ILogger implementation
 		void ILogger.log(string msg)
 		{
-			Console.WriteLine("[LOG] " + msg);
+			Console.WriteLine("[LOG] " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " - " + msg);
 		}
 
 		void ILogger.warn(string msg)
 		{
-			Console.WriteLine("[WARN] " + msg);
+			Console.WriteLine("[WARN] " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " - " + msg);
 		}
 
 		void ILogger.error(string msg)
 		{
-			Console.WriteLine("[ERROR] " + msg);
+			Console.WriteLine("[ERROR] " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " - " + msg);
 		}
 
 		void ILogger.info(string msg)
 		{
-			Console.WriteLine("[INFO] " + msg);
+			Console.WriteLine("[INFO] " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " - " + msg);
 		}
 		#endregion
 	}

@@ -27,6 +27,7 @@ using System.Net;
 using WebSocketServer.Drafts;
 using System.Threading.Tasks;
 using System.Collections;
+using System.Security.Cryptography.X509Certificates;
 
 namespace WebSocketServer
 {
@@ -34,6 +35,7 @@ namespace WebSocketServer
 	{
 		private Dictionary<string, Application> applications;
 		private TcpListener tcpListener;
+		private TcpListener tcpSecureListener;
 		private bool _checkOrigin = false;
 		private Draft[] drafts;
 		private bool exitEvent = false;
@@ -43,13 +45,32 @@ namespace WebSocketServer
 			get { return drafts; }
 		}
 
-		public Server(ILogger l)
+		public Server(ILogger logger)
 		{
-			logger = l;
+			this.logger = logger;
 			applications = new Dictionary<string, Application>();
 			
+			ReloadApplications();
+
+			drafts = new Draft[2];
+			drafts[0] = new Draft10();
+			drafts[1] = new Draft17();
+		}
+		
+		public void addApplication(string name, Application app)
+		{
+			if (!applications.ContainsKey(name))
+			{
+				applications.Add(name, app);
+			}
+		}
+		
+		public void ReloadApplications()
+		{
 			string serverFolder = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 			string applicationfolder = Path.Combine(serverFolder, "Applications");
+
+			List<string> foundApplications = new List<string>();
 			if (Directory.Exists(applicationfolder))
 			{
 				Type abstractType = typeof(Application);
@@ -62,19 +83,64 @@ namespace WebSocketServer
 					{
 						if (abstractType.IsAssignableFrom(type))
 						{
-							Application obj = (Application)Activator.CreateInstance(type);
-							obj.SetLogger(logger);
-							applications.Add(Path.GetFileNameWithoutExtension(dllpath), obj);
+							string name = Path.GetFileNameWithoutExtension(dllpath);
+							foundApplications.Add(name);
+							if (!applications.ContainsKey (name))
+							{
+								Application obj = (Application)Activator.CreateInstance(type);
+								obj.SetLogger(logger);
+								applications.Add(name, obj);
+							}
+							else
+							{
+								Application obj = (Application)Activator.CreateInstance(type);
+								if (obj.Version != applications[name].Version)
+								{
+									obj.SetLogger(logger);
+									applications[name] = obj;
+									if (applications[name].IsStarted)
+									{
+										applications[name].Stop();
+										obj.Start();
+									}
+								}
+							}
+							break;
 						}
 					}
 				}
 			}
 
-			drafts = new Draft[2];
-			drafts[0] = new Draft10();
-			drafts[1] = new Draft17();
+			List<string> applicationsToRemove = new List<string>();
+			foreach (KeyValuePair<string, Application> kvp in applications)
+			{
+				if (!foundApplications.Contains(kvp.Key))
+				{
+					applicationsToRemove.Add(kvp.Key);
+				}
+			}
+			foreach (string appName in applicationsToRemove)
+			{
+				Application app = applications[appName];
+				applications.Remove(appName);
+				if (app.IsStarted)
+				{
+					app.Stop();
+				}
+			}
 		}
-		
+
+		public void ReloadConfig()
+		{
+			//Reload config if you have any
+		}
+
+		public void Reload()
+		{
+			this.ReloadApplications();
+			this.ReloadConfig();
+		}
+
 		public Application getApplication(string path)
 		{
 			lock (((ICollection)applications).SyncRoot)
@@ -133,11 +199,30 @@ namespace WebSocketServer
 				}
 			}
 			exitEvent = false;
-			tcpListener = new TcpListener(IPAddress.Any, 8080);
 			
-			tcpListener.Start();
-			startAccept();
-			
+			bool nonsecure = true;
+			if (nonsecure)
+			{
+				tcpListener = new TcpListener(IPAddress.Any, 8080);
+				tcpListener.Start();
+			}
+
+			bool secure = true;
+			if (secure)
+			{
+				tcpSecureListener = new TcpListener(IPAddress.Any, 8081);
+				tcpSecureListener.Start();
+			}
+
+			if (nonsecure)
+			{
+				startAccept();
+			}
+			if (secure)
+			{
+				startSecureAccept();
+			}
+
 			base.Start();
 		}
 
@@ -186,11 +271,60 @@ namespace WebSocketServer
 			}
 		}
 		
+		private void startSecureAccept()
+		{
+			try
+			{
+				if (!exitEvent)
+				{
+					tcpSecureListener.BeginAcceptTcpClient(handleAsyncSecureConnection, tcpSecureListener);
+				}
+			}
+			catch (Exception ex)
+			{
+				int count = 0;
+				lock (((ICollection)connections).SyncRoot)
+				{
+					count = connections.Count;
+				}
+				logger.error("Begining accepting a client failed. Number of connections: " + count.ToString() + ". Error message: " + ex.Message);
+			}
+		}
+
+		private void handleAsyncSecureConnection(IAsyncResult res)
+		{
+			try
+			{
+				if (!exitEvent)
+				{
+					startSecureAccept(); //listen for new connections again
+					TcpClient client = tcpSecureListener.EndAcceptTcpClient(res);
+					if (client != null)
+					{
+						string certificate_filename = "certificate.pfx";
+						string certification_password = "1234";
+						X509Certificate2 x509 = new X509Certificate2(certificate_filename, certification_password);
+						new SecureConnection(client, this, x509);
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				int count = 0;
+				lock (((ICollection)connections).SyncRoot)
+				{
+					count = connections.Count;
+				}
+				logger.error("Accepting a client failed. Number of connections: " + count.ToString() + ". Error message: " + ex.Message);
+			}
+		}
+
 		public override void Stop()
 		{
 			lock (((ICollection)connections).SyncRoot)
 			{
-				foreach (IConnection con in connections)
+				List<IConnection> cs = new List<IConnection>(connections);
+				foreach (IConnection con in cs)
 				{
 					con.Close();
 				}
@@ -204,7 +338,14 @@ namespace WebSocketServer
 			}
 			exitEvent = true;
 			base.Stop();
-			tcpListener.Stop();
+			if (tcpListener != null)
+			{
+				tcpListener.Stop();
+			}
+			if (tcpSecureListener != null)
+			{
+				tcpSecureListener.Stop();
+			}
 		}
 
 		public override void OnData(Frame frame)
