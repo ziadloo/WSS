@@ -25,7 +25,7 @@ using System.Text.RegularExpressions;
 using System.Text;
 using System.Collections;
 using System.Collections.Generic;
-using WebSocketServer.Drafts;
+using Protocol;
 using System.Threading.Tasks;
 
 namespace WebSocketServer

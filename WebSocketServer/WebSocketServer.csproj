@@ -47,9 +47,6 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="Server.cs" />
     <Compile Include="Connection.cs" />
-    <Compile Include="Drafts\Draft.cs" />
-    <Compile Include="Drafts\Draft10.cs" />
-    <Compile Include="Drafts\Draft17.cs" />
     <Compile Include="SecureConnection.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
@@ -58,8 +55,9 @@
       <Project>{6302F2C2-A7AE-4C85-B6EA-A3E023E71CFE}</Project>
       <Name>Base</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Drafts\" />
+    <ProjectReference Include="..\Protocol\Protocol.csproj">
+      <Project>{D39106F6-7181-45D9-819F-5C6611B753AA}</Project>
+      <Name>Protocol</Name>
+    </ProjectReference>
   </ItemGroup>
 </Project>
