@@ -20,10 +20,10 @@
     <WarningLevel>4</WarningLevel>
     <CustomCommands>
       <CustomCommands>
-        <Command type="AfterBuild" command="mkdir ${SolutionDir}/WSSDaemon/bin/${ProjectConfigName}/Applications -p" externalConsole="True" />
+        <Command type="AfterBuild" command="mkdir ${SolutionDir}/WSSDaemon/bin/${ProjectConfigName}/Applications -p" />
         <Command type="AfterBuild" command="cp ${TargetFile} ${SolutionDir}/WSSDaemon/bin/${ProjectConfigName}/Applications" />
-        <Command type="AfterBuild" command="mkdir ${SolutionDir}/Console/bin/${ProjectConfigName}/Applications -p" />
-        <Command type="AfterBuild" command="cp ${TargetFile} ${SolutionDir}/Console/bin/${ProjectConfigName}/Applications" />
+        <Command type="AfterBuild" command="mkdir ${SolutionDir}/WSSConsole/bin/${ProjectConfigName}/Applications -p" />
+        <Command type="AfterBuild" command="cp ${TargetFile} ${SolutionDir}/WSSConsole/bin/${ProjectConfigName}/Applications" />
       </CustomCommands>
     </CustomCommands>
     <ConsolePause>false</ConsolePause>
@@ -36,10 +36,10 @@
     <WarningLevel>4</WarningLevel>
     <CustomCommands>
       <CustomCommands>
-        <Command type="AfterBuild" command="mkdir ${SolutionDir}/WSSDaemon/bin/${ProjectConfigName}/Applications -p" externalConsole="True" />
+        <Command type="AfterBuild" command="mkdir ${SolutionDir}/WSSDaemon/bin/${ProjectConfigName}/Applications -p" />
         <Command type="AfterBuild" command="cp ${TargetFile} ${SolutionDir}/WSSDaemon/bin/${ProjectConfigName}/Applications" />
-        <Command type="AfterBuild" command="mkdir ${SolutionDir}/Console/bin/${ProjectConfigName}/Applications -p" />
-        <Command type="AfterBuild" command="cp ${TargetFile} ${SolutionDir}/Console/bin/${ProjectConfigName}/Applications" />
+        <Command type="AfterBuild" command="mkdir ${SolutionDir}/WSSConsole/bin/${ProjectConfigName}/Applications -p" />
+        <Command type="AfterBuild" command="cp ${TargetFile} ${SolutionDir}/WSSConsole/bin/${ProjectConfigName}/Applications" />
       </CustomCommands>
     </CustomCommands>
     <ConsolePause>false</ConsolePause>
@@ -51,6 +51,7 @@
     <CustomCommands>
       <CustomCommands>
         <Command type="AfterBuild" command="&quot;${SolutionDir}\WindowsDeploy.bat&quot; &quot;${TargetFile}&quot; &quot;${SolutionDir}\WSSDaemon\bin\${ProjectConfigName}\Applications&quot;" externalConsole="True" />
+        <Command type="AfterBuild" command="&quot;${SolutionDir}\WindowsDeploy.bat&quot; &quot;${TargetFile}&quot; &quot;${SolutionDir}\WSSConsole\bin\${ProjectConfigName}\Applications&quot;" externalConsole="True" />
       </CustomCommands>
     </CustomCommands>
     <DebugSymbols>true</DebugSymbols>
@@ -63,6 +64,7 @@
     <CustomCommands>
       <CustomCommands>
         <Command type="AfterBuild" command="&quot;${SolutionDir}\WindowsDeploy.bat&quot; &quot;${TargetFile}&quot; &quot;${SolutionDir}\WSSDaemon\bin\${ProjectConfigName}\Applications&quot;" externalConsole="True" />
+        <Command type="AfterBuild" command="&quot;${SolutionDir}\WindowsDeploy.bat&quot; &quot;${TargetFile}&quot; &quot;${SolutionDir}\WSSConsole\bin\${ProjectConfigName}\Applications&quot;" externalConsole="True" />
       </CustomCommands>
     </CustomCommands>
   </PropertyGroup>
