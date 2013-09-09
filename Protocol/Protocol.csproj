@@ -32,8 +32,16 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MyClass.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Draft.cs" />
+    <Compile Include="Draft10.cs" />
+    <Compile Include="Draft17.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <ProjectReference Include="..\Base\Base.csproj">
+      <Project>{6302F2C2-A7AE-4C85-B6EA-A3E023E71CFE}</Project>
+      <Name>Base</Name>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

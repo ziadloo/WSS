@@ -23,7 +23,7 @@ using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace WebSocketServer.Drafts
+namespace Protocol
 {
 	public class Draft10 : Draft
 	{

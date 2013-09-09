@@ -21,7 +21,7 @@ using System.Text;
 using System.Collections.Generic;
 using Base;
 
-namespace WebSocketServer.Drafts
+namespace Protocol
 {
 	public abstract class Draft
 	{

@@ -20,7 +20,7 @@ using System;
 using Base;
 using System.Collections.Generic;
 
-namespace WebSocketServer.Drafts
+namespace Protocol
 {
 	public class Draft17 : Draft10
 	{
