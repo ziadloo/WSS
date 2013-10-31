@@ -28,12 +28,14 @@ using Protocol;
 using System.Threading.Tasks;
 using System.Collections;
 using System.Security.Cryptography.X509Certificates;
+using System.Linq;
+using System.Collections.Concurrent;
 
 namespace WebSocketServer
 {
-	public class Server : Application, ILogger
+	public class Server : Application, ILogger, IServer
 	{
-		private Dictionary<string, Application> applications;
+		private ConcurrentDictionary<string, Application> applications;
 		private TcpListener tcpListener;
 		private TcpListener tcpSecureListener;
 		private bool _checkOrigin = false;
@@ -44,28 +46,39 @@ namespace WebSocketServer
 		{
 			get { return drafts; }
 		}
+		
+		public bool CheckOrigin
+		{
+			get { return _checkOrigin; }
+		}
+		
+		public bool checkOrigin(string origin)
+		{
+			return true;
+		}
 
 		public Server(ILogger logger)
 		{
 			this.logger = logger;
-			applications = new Dictionary<string, Application>();
-			
-			ReloadApplications();
+			applications = new ConcurrentDictionary<string, Application>();
+
+			((IServer)this).ReloadApplications();
 
 			drafts = new Draft[2];
 			drafts[0] = new Draft10();
 			drafts[1] = new Draft17();
 		}
 		
-		public void addApplication(string name, Application app)
+		#region implemented abstract members of Base.IServer
+
+		void IServer.AddApplication(string name, Application app)
 		{
-			if (!applications.ContainsKey(name))
-			{
-				applications.Add(name, app);
-			}
+			app.SetLogger(logger);
+			app.Server = (IServer)this;
+			applications.TryAdd(name, app);
 		}
-		
-		public void ReloadApplications()
+
+		void IServer.ReloadApplications()
 		{
 			string serverFolder = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 			string applicationfolder = Path.Combine(serverFolder, "Applications");
@@ -85,22 +98,25 @@ namespace WebSocketServer
 						{
 							string name = Path.GetFileNameWithoutExtension(dllpath);
 							foundApplications.Add(name);
-							if (!applications.ContainsKey (name))
+
+							Application oldApp = null;
+							if (!applications.TryGetValue(name, out oldApp))
 							{
 								Application obj = (Application)Activator.CreateInstance(type);
 								obj.SetLogger(logger);
-								applications.Add(name, obj);
+								obj.Server = (IServer)this;
+								applications.TryAdd(name, obj);
 							}
 							else
 							{
 								Application obj = (Application)Activator.CreateInstance(type);
-								if (obj.Version != applications[name].Version)
+								if (obj.Version != oldApp.Version)
 								{
 									obj.SetLogger(logger);
 									applications[name] = obj;
-									if (applications[name].IsStarted)
+									if (oldApp.IsStarted)
 									{
-										applications[name].Stop();
+										oldApp.Stop();
 										obj.Start();
 									}
 								}
@@ -121,50 +137,63 @@ namespace WebSocketServer
 			}
 			foreach (string appName in applicationsToRemove)
 			{
-				Application app = applications[appName];
-				applications.Remove(appName);
-				if (app.IsStarted)
+				Application app = null;
+				applications.TryRemove(appName, out app);
+				if (app != null && app.IsStarted)
 				{
 					app.Stop();
 				}
 			}
 		}
 
-		public void ReloadConfig()
+		void IServer.ReloadConfig()
 		{
 			//Reload config if you have any
 		}
 
-		public void Reload()
+		void IServer.Reload()
 		{
-			this.ReloadApplications();
-			this.ReloadConfig();
+			((IServer)this).ReloadApplications();
+			((IServer)this).ReloadConfig();
+		}
+		
+		Application IServer.GetApplication(string path)
+		{
+			Application app = null;
+			applications.TryGetValue(path, out app);
+			return app;
 		}
 
-		public Application getApplication(string path)
+		string[] IServer.GetApplicationList()
 		{
-			lock (((ICollection)applications).SyncRoot)
+			return applications.Keys.ToArray();
+		}
+
+		long IServer.GetTotalConnectionCount()
+		{
+			long sum = 0;
+			foreach (KeyValuePair<string, Application> kvp in applications)
 			{
-				if (applications.ContainsKey(path))
-				{
-					return applications[path];
-				}
-				else
-				{
-					return null;
-				}
+				sum += kvp.Value.GetConnectionCount();
+			}
+			return sum;
+		}
+
+		long IServer.GetApplicationConnectionCount(string application_name)
+		{
+			Application app = null;
+			applications.TryGetValue(application_name, out app);
+			if (app != null)
+			{
+				return app.GetConnectionCount ();
+			}
+			else
+			{
+				return 0;
 			}
 		}
 
-		public bool CheckOrigin
-		{
-			get { return _checkOrigin; }
-		}
-
-		public bool checkOrigin(string origin)
-		{
-			return true;
-		}
+		#endregion
 
 		#region ILogger implementation
 		void ILogger.log(string msg)
@@ -191,15 +220,12 @@ namespace WebSocketServer
 		#region implemented abstract members of Base.Application
 		public override void Start()
 		{
-			lock (((ICollection)applications).SyncRoot)
+			foreach (var pair in applications)
 			{
-				foreach (Application app in applications.Values)
-				{
-					app.Start();
-				}
+				pair.Value.Start();
 			}
 			exitEvent = false;
-			
+
 			bool nonsecure = true;
 			if (nonsecure)
 			{
@@ -329,12 +355,9 @@ namespace WebSocketServer
 					con.Close();
 				}
 			}
-			lock (((ICollection)applications).SyncRoot)
+			foreach (var pair in applications)
 			{
-				foreach (Application app in applications.Values)
-				{
-					app.Stop();
-				}
+				pair.Value.Stop();
 			}
 			exitEvent = true;
 			base.Stop();

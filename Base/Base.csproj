@@ -50,6 +50,7 @@
     <Compile Include="Application.cs" />
     <Compile Include="Frame.cs" />
     <Compile Include="Header.cs" />
+    <Compile Include="IServer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

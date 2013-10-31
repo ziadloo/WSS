@@ -41,6 +41,12 @@ namespace Base
 			get { return isStarted; }
 		}
 
+		public IServer Server
+		{
+			get;
+			set;
+		}
+
 		public Application()
 		{
 			connections = new List<IConnection>();
@@ -98,6 +104,14 @@ namespace Base
 		public void EnqueueIncomingFrame(Frame frame)
 		{
 			OnData(frame);
+		}
+
+		public long GetConnectionCount()
+		{
+			lock (((ICollection)connections).SyncRoot)
+			{
+				return connections.Count;
+			}
 		}
 
 		public abstract void OnData(Frame frame);

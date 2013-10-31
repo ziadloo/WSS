@@ -24,12 +24,24 @@ namespace Base
 	{
 		public enum OpCodeType
 		{
-			Continue = 0x0,
-			Text = 0x1,
-			Binary = 0x2,
-			Close = 0x8,
-			Ping = 0x9,
-			Pong = 0xA
+			Continue = 0x0
+			, Text = 0x1
+			, Binary = 0x2
+			, Close = 0x8
+			, Ping = 0x9
+			, Pong = 0xA
+		}
+
+		public enum FinType
+		{
+			More = 0x0
+			, Final = 0x1
+		}
+
+		public enum RsvType
+		{
+			Off = 0x0
+			, On = 0x1
 		}
 
 		private string message;
@@ -50,6 +62,26 @@ namespace Base
 		public OpCodeType OpCode
 		{
 			get { return opCode; }
+		}
+
+		public Frame.FinType Fin
+		{
+			get; set;
+		}
+
+		public Frame.RsvType Rsv1
+		{
+			get; set;
+		}
+
+		public Frame.RsvType Rsv2
+		{
+			get; set;
+		}
+
+		public Frame.RsvType Rsv3
+		{
+			get; set;
 		}
 
 		public IConnection Connection

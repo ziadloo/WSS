@@ -41,6 +41,7 @@ namespace WebSocketServer
 		protected Draft draft;
 		protected List<byte> buffer = new List<byte>();
 		protected byte[] message = new byte[4096];
+		protected object extra = null;
 
 		public Connection(TcpClient socket, Server server)
 		{
@@ -119,16 +120,18 @@ namespace WebSocketServer
 							}
 							else
 							{
+								//Extracting application's name
 								Regex regex = new Regex("/?([^/\\?\\*\\+\\\\]+)[/\\?]?.*");
 								Match mtch = regex.Match(header.URL);
 								string appName = mtch.Groups[1].Value;
 
-								application = server.getApplication(appName);
+								application = ((IServer)server).GetApplication(appName);
 								if (application == null)
 								{
 									((ILogger)server).log("Invalid application: " + header.URL);
 									sendHttpResponse(404);
 									((IConnection)this).Close();
+									return false;
 								}
 							}
 							
@@ -141,6 +144,8 @@ namespace WebSocketServer
 							connected = true;
 							application.AddConnection(this);
 							server.AddConnection(this);
+
+							break;
 						}
 						catch
 						{
@@ -254,6 +259,24 @@ namespace WebSocketServer
 			}
 		}
 		
+		bool IConnection.IsABridge
+		{
+			get
+			{
+				return false;
+			}
+		}
+		
+		Application IConnection.Application
+		{
+			get { return application; }
+		}
+
+		IServer IConnection.Server
+		{
+			get { return server; }
+		}
+
 		void IConnection.Close()
 		{
 			if (connected)
@@ -273,12 +296,12 @@ namespace WebSocketServer
 				}
 			}
 		}
+		
+		object IConnection.Extra
+		{
+			get { return extra; }
+			set { extra = value; }
+		}
 		#endregion
-	}
-	
-	class ReadBuffer
-	{
-		public int BytesRead = 0;
-		public byte[] Buffer = new byte[4096];
 	}
 }

@@ -25,8 +25,12 @@ namespace Base
 		string IP { get; }
 		int Port { get; }
 		bool Connected { get; }
+		bool IsABridge { get; }
+		Application Application { get; }
+		IServer Server { get; }
 		void Send(Frame frame);
 		void Close();
+		object Extra { get; set; }
 	}
 }
 

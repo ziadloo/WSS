@@ -24,6 +24,7 @@ namespace Base
 	public class Header
 	{
 		private Dictionary<string, string> entries = new Dictionary<string, string>();
+		private Dictionary<string, string> cookies = new Dictionary<string, string>();
 		private string url;
 
 		public string URL
@@ -62,13 +63,51 @@ namespace Base
 			}
 		}
 
+		public void SetCookie(string name, string value)
+		{
+			if (cookies.ContainsKey(name))
+			{
+				cookies[name] = value;
+			}
+			else
+			{
+				cookies.Add(name, value);
+			}
+		}
+
+		public string GetCookie(string name)
+		{
+			if (cookies.ContainsKey(name))
+			{
+				return cookies[name];
+			}
+			else
+			{
+				return null;
+			}
+		}
+
 		public override string ToString()
 		{
 			string buffer = url + "\r\n";
+
 			foreach (KeyValuePair<string, string> item in entries)
 			{
 				buffer += item.Key + ": " + item.Value + "\r\n";
 			}
+
+			if (cookies.Count > 0)
+			{
+				string[] cs = new string[cookies.Count];
+				int i = 0;
+				foreach (KeyValuePair<string, string> kvp in cookies)
+				{
+					cs[i] = kvp.Key + "=" + Uri.EscapeUriString(kvp.Value);
+					i++;
+				}
+				buffer += "Cookie: " + string.Join(";", cs) + "\r\n";
+			}
+
 			return buffer + "\r\n";
 		}
 
