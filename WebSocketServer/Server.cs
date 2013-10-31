@@ -25,7 +25,6 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Net;
 using Protocol;
-using System.Threading.Tasks;
 using System.Collections;
 using System.Security.Cryptography.X509Certificates;
 using System.Linq;
