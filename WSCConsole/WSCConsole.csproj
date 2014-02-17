@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Linux_Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>10.0.0</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{BB6233EA-7D8D-4438-B427-394D6F715A2E}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>WSCConsole</RootNamespace>
+    <AssemblyName>WSCConsole</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Linux_Debug|AnyCPU' ">
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Linux_Debug</OutputPath>
+    <WarningLevel>4</WarningLevel>
+    <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>DEBUG;LOGGER;</DefineConstants>
+    <Externalconsole>true</Externalconsole>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Linux_Release|AnyCPU' ">
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Linux_Release</OutputPath>
+    <WarningLevel>4</WarningLevel>
+    <Externalconsole>true</Externalconsole>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Windows_Debug|AnyCPU' ">
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Windows_Debug</OutputPath>
+    <WarningLevel>4</WarningLevel>
+    <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>DEBUG;LOGGER;</DefineConstants>
+    <Externalconsole>true</Externalconsole>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Windows_Release|AnyCPU' ">
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Windows_Release</OutputPath>
+    <WarningLevel>4</WarningLevel>
+    <Externalconsole>true</Externalconsole>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=c7439020c8fedf87">
+      <Private>False</Private>
+      <Package>monodevelop</Package>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <ProjectReference Include="..\WebSocketClient\WebSocketClient.csproj">
+      <Project>{3F776841-48FB-4CCC-85AE-2271327823D1}</Project>
+      <Name>WebSocketClient</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\JsonRpc\JsonRpc.csproj">
+      <Project>{266AB4B3-B5EE-4462-826B-A88804BEA399}</Project>
+      <Name>JsonRpc</Name>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

@@ -111,7 +111,7 @@ namespace WebSocketServer
 					{
 						try
 						{
-							header = d.ParseHandshake(buffer);
+							header = d.ParseClientRequestHandshake(buffer);
 							draft = d;
 							
 							if (header.URL == "/")
@@ -128,18 +128,18 @@ namespace WebSocketServer
 								application = ((IServer)server).GetApplication(appName);
 								if (application == null)
 								{
-									((ILogger)server).log("Invalid application: " + header.URL);
+									((ILogger)server).error("Invalid application: " + appName + ", URL: " + header.URL);
 									sendHttpResponse(404);
 									((IConnection)this).Close();
 									return false;
 								}
 							}
 							
-							byte[] b = d.CreateResponseHandshake(header);
+							byte[] b = d.CreateServerResponseHandshake(header);
 							socketStream.Write(b, 0, b.Length);
 							socketStream.Flush();
 #if LOGGER
-							((ILogger)server).log("Handshake sent");
+							((ILogger)server).log("Handshake was sent to:" + ((IConnection)this).IP.ToString());
 #endif
 							connected = true;
 							application.AddConnection(this);
@@ -155,18 +155,26 @@ namespace WebSocketServer
 				if (draft != null)
 				{
 					Frame f;
-					while ((f = draft.ParseFrameBytes(buffer)) != null)
+					while ((f = draft.ParseClientFrameBytes(buffer)) != null)
 					{
-						if (f.OpCode == Frame.OpCodeType.Close)
-						{
-							((IConnection)this).Close();
-							break;
-						}
-						if (application != null)
-						{
-							f.Connection = this;
-							application.EnqueueIncomingFrame(f);
-						}
+                        f.Connection = this;
+                        if (f.OpCode == Frame.OpCodeType.Close)
+                        {
+                            ((IConnection)this).Close();
+                            break;
+                        }
+                        else if (f.OpCode == Frame.OpCodeType.Ping)
+                        {
+                            server.Ping(f);
+                        }
+                        else if (f.OpCode == Frame.OpCodeType.Pong)
+                        {
+                            server.Pong(f);
+                        }
+                        if (application != null)
+                        {
+                            application.EnqueueIncomingFrame(f);
+                        }
 					}
 				}
 			}
@@ -214,7 +222,7 @@ namespace WebSocketServer
 		{
 			try
 			{
-				byte[] b = draft.CreateFrameBytes(frame);
+				byte[] b = draft.CreateServerFrameBytes(frame);
 				if (b != null)
 				{
 					socketStream.BeginWrite(b, 0, b.Length, null, null);
@@ -283,7 +291,7 @@ namespace WebSocketServer
 			{
 				connected = false;
 #if LOGGER
-				((ILogger)server).log("Connection is closed");
+				((ILogger)server).log("Connection is closed, "  + ((IConnection)this).IP.ToString());
 #endif
 				socket.Close();
 				if (application != null)

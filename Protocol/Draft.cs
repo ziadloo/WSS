@@ -50,11 +50,20 @@ namespace Protocol
 				return encoder.GetString(buffer.ToArray(), start, end - start - 1);
 			}
 		}
-		
-		public abstract Header ParseHandshake(List<byte> buffer);
-		public abstract byte[] CreateResponseHandshake(Header header);
-		public abstract Frame ParseFrameBytes(List<byte> buffer);
-		public abstract byte[] CreateFrameBytes(Frame frame);
+
+		#region server part of the protocol
+		public abstract Header ParseClientRequestHandshake(List<byte> buffer);
+		public abstract byte[] CreateServerResponseHandshake(Header header);
+		public abstract Frame ParseClientFrameBytes(List<byte> buffer);
+		public abstract byte[] CreateServerFrameBytes(Frame frame);
+		#endregion
+
+		#region client part of the protocol
+		public abstract byte[] CreateClientRequestHandshake(string url, out string expectedAccept);
+		public abstract Header ParseServerResponseHandshake(List<byte> buffer);
+		public abstract byte[] CreateClientFrameBytes(Frame frame);
+		public abstract Frame ParseServerFrameBytes(List<byte> buffer);
+		#endregion
 	}
 }
 

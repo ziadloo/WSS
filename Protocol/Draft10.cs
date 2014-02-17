@@ -1,4 +1,4 @@
-/**
+ /**
  *   Copyright 2013 Mehran Ziadloo
  *   WSS: A WebSocket Server written in C# and .Net (Mono)
  *   (https://github.com/ziadloo/WSS)
@@ -27,11 +27,13 @@ namespace Protocol
 {
 	public class Draft10 : Draft
 	{
-		#region implemented abstract members of WebSocketServer.Draft.Draft
-		public override Header ParseHandshake(List<byte> buffer)
+		protected static readonly string rfc_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+		#region implemented abstract members of Draft for server
+		public override Header ParseClientRequestHandshake(List<byte> buffer)
 		{
 			int bufferUsed = 0;
-			Header h = _parseHandshake(buffer, ref bufferUsed);
+			Header h = _parseClientHandshake(buffer, ref bufferUsed);
 			string v = h.Get("Sec-WebSocket-Version");
 			int vv = Int32.Parse(v.Trim());
 			if (vv != 7 && vv != 8)
@@ -42,13 +44,13 @@ namespace Protocol
 			return h;
 		}
 
-		public override byte[] CreateResponseHandshake(Header header)
+		public override byte[] CreateServerResponseHandshake(Header header)
 		{
 			Header h = _createResponseHandshake(header);
 			return h.ToBytes();
 		}
 
-		public override Frame ParseFrameBytes(List<byte> buffer)
+		public override Frame ParseClientFrameBytes(List<byte> buffer)
 		{
 			if (buffer.Count < 2)
 			{
@@ -164,7 +166,7 @@ namespace Protocol
 			}
 		}
 
-		public override byte[] CreateFrameBytes(Frame frame)
+		public override byte[] CreateServerFrameBytes(Frame frame)
 		{
 			byte[] data = new byte[0];
 			if (frame.Data != null)
@@ -247,8 +249,242 @@ namespace Protocol
 			return frameBytes.ToArray();
 		}
 		#endregion
+
+		#region implemented abstract members of Draft for client
+
+		public override byte[] CreateClientRequestHandshake(string url, out string expectedAccept)
+		{
+			Header header = _createRequestHandshake(url, out expectedAccept);
+			return header.ToBytes();
+		}
+
+		public override Header ParseServerResponseHandshake(List<byte> buffer)
+		{
+			int bufferUsed = 0;
+			Header h = _parseServerHandshake(buffer, ref bufferUsed);
+			string v = h.Get("Sec-WebSocket-Version");
+			int vv = Int32.Parse(v.Trim());
+			if (vv != 7 && vv != 8)
+			{
+				throw new Exception();
+			}
+			buffer.RemoveRange(0, bufferUsed);
+			return h;
+		}
+
+		public override byte[] CreateClientFrameBytes(Frame frame)
+		{
+			byte[] data = new byte[0];
+			if (frame.Data != null)
+			{
+				data = frame.Data;
+			}
+			else if (frame.Message != null)
+			{
+				data = System.Text.Encoding.UTF8.GetBytes(frame.Message);
+			}
+
+			List<byte> frameBytes = new List<byte>();
+			int payloadLength = data.Length;
+
+			frameBytes.Add(0);
+			if (payloadLength < 126)
+			{
+				frameBytes.Add((byte)payloadLength);
+			}
+			else if (payloadLength < 65536)
+			{
+				frameBytes.Add((byte)126);
+				frameBytes.Add((byte)(payloadLength / 256));
+				frameBytes.Add((byte)(payloadLength % 256));
+			}
+			else
+			{
+				frameBytes.Add((byte)127);
+
+				int left = payloadLength;
+				int unit = 256;
+				byte[] fragment = new byte[10];
+
+				for (int i = 9; i > 1; i--)
+				{
+					fragment[i] = (byte)(left % unit);
+					left = left / unit;
+
+					if (left == 0)
+					{
+						break;
+					}
+				}
+
+				for (int i = 2; i < 10; i++)
+				{
+					frameBytes.Add(fragment[i]);
+				}
+			}
+
+			//Set FIN
+			frameBytes[0] = (byte)((byte)frame.OpCode | 0x80);
+
+			//Set mask bit
+			frameBytes[1] = (byte)(frameBytes[1] | 0x80);
+
+			//Mask
+			byte[] mask = new byte[4];
+			for (int i = 0; i < 4; i++)
+			{
+				mask[i] = (byte)(DateTime.Now.Ticks % 256);
+				frameBytes.Add(mask[i]);
+			}
+
+			for (var i = 0; i < payloadLength; i++)
+			{
+				frameBytes.Add((byte)(data[i] ^ mask[i % 4]));
+			}
+
+			return frameBytes.ToArray();
+		}
+
+		public override Frame ParseServerFrameBytes(List<byte> buffer)
+		{
+			if (buffer.Count < 2)
+			{
+				return null;
+			}
+
+			// FIN
+			Frame.FinType fin = (buffer[0] & 0x80) == 0x80 ? Frame.FinType.Final : Frame.FinType.More;
+			// RSV1
+			Frame.RsvType rsv1 = (buffer[0] & 0x40) == 0x40 ? Frame.RsvType.On : Frame.RsvType.Off;
+			// RSV2
+			Frame.RsvType rsv2 = (buffer[0] & 0x20) == 0x20 ? Frame.RsvType.On : Frame.RsvType.Off;
+			// RSV3
+			Frame.RsvType rsv3 = (buffer[0] & 0x10) == 0x10 ? Frame.RsvType.On : Frame.RsvType.Off;
+			// Opcode
+			Frame.OpCodeType opcode = (Frame.OpCodeType)(buffer[0] & 0x0f);
+			// MASK
+			var isMasked = (buffer[1] & 0x80) == 0x80;
+			// Payload len
+			var payloadLength = (byte)(buffer[1] & 0x7f);
+			var extLength = payloadLength < 126 ? 0 : payloadLength == 126 ? 2 : 8;
+
+			if ((opcode == Frame.OpCodeType.Close || opcode == Frame.OpCodeType.Ping || opcode == Frame.OpCodeType.Pong)
+		    && payloadLength > 125)
+			{
+				throw new Exception("The payload length of a control frame must be 125 bytes or less.");
+				//return createCloseFrame(CloseStatusCode.INCONSISTENT_DATA, "The payload length of a control frame must be 125 bytes or less.", Mask.UNMASK);
+			}
+
+			if (extLength > 0 && buffer.Count < extLength)
+			{
+				throw new Exception("'Extended Payload Length' of a frame cannot be read from the data stream.");
+				//return createCloseFrame(CloseStatusCode.ABNORMAL, "'Extended Payload Length' of a frame cannot be read from the data stream.", Mask.UNMASK);
+			}
+
+			//Mask
+			byte[] mask = new byte[0];
+			int payloadOffset = 2;
+			int dataLength;
+
+			if (isMasked)
+			{
+				if (buffer.Count <= payloadOffset + 4)
+				{
+					throw new Exception("Unfinished buffer");
+				}
+				mask = buffer.GetRange(payloadOffset, 4).ToArray();
+				payloadOffset += 4;
+			}
+
+			if (payloadLength < 126)
+			{
+				dataLength = payloadLength;
+			}
+			else if (payloadLength == 126)
+			{
+				byte[] temp = buffer.GetRange(payloadOffset, 2).ToArray();
+				payloadOffset += 2;
+				Array.Reverse(temp);
+				dataLength = BitConverter.ToUInt16(temp, 0);
+			}
+			else
+			{
+				byte[] temp = buffer.GetRange(payloadOffset, 8).ToArray();
+				payloadOffset += 8;
+				Array.Reverse(temp);
+				dataLength = (int)(BitConverter.ToUInt64(temp, 0));
+			}
+
+			/**
+			 * We have to check for large frames here. socket_recv cuts at 1024 bytes
+			 * so if websocket-frame is > 1024 bytes we have to wait until whole
+			 * data is transferd. 
+			 */
+			if (buffer.Count < dataLength + payloadOffset)
+			{
+				return null;
+			}
+
+			Frame f;
+			switch (opcode)
+			{
+				case Frame.OpCodeType.Binary:
+				{
+					byte[] data = buffer.GetRange(payloadOffset, dataLength).ToArray();
+					if (isMasked)
+					{
+						for (int i = 0; i < data.Length; i++)
+						{
+							data[i] = (byte)(data[i] ^ mask[i % 4]);
+						}
+					}
+					buffer.RemoveRange(0, dataLength + payloadOffset);
+					f = new Frame(data);
+					break;
+				}
+
+				case Frame.OpCodeType.Text:
+				{
+					byte[] data = buffer.GetRange(payloadOffset, dataLength).ToArray();
+					if (isMasked)
+					{
+						for (int i = 0; i < data.Length; i++)
+						{
+							data[i] = (byte)(data[i] ^ mask[i % 4]);
+						}
+					}
+					buffer.RemoveRange(0, dataLength + payloadOffset);
+					f = new Frame(System.Text.Encoding.UTF8.GetString(data));
+					break;
+				}
+
+				default:
+				{
+					byte[] data = buffer.GetRange(payloadOffset, dataLength).ToArray();
+					if (isMasked)
+					{
+						for (int i = 0; i < data.Length; i++)
+						{
+							data[i] = (byte)(data[i] ^ mask[i % 4]);
+						}
+					}
+					buffer.RemoveRange(0, dataLength + payloadOffset);
+					f = new Frame(opcode, data);
+					break;
+				}
+			}
+
+			f.Fin = fin;
+			f.Rsv1 = rsv1;
+			f.Rsv2 = rsv2;
+			f.Rsv3 = rsv3;
+
+			return f;
+		}
+
+		#endregion
 		
-		protected Header _parseHandshake(List<byte> buffer, ref int bufferUsed)
+		protected Header _parseClientHandshake(List<byte> buffer, ref int bufferUsed)
 		{
 			bufferUsed = 0;
 			if (buffer.Count == 0)
@@ -286,14 +522,51 @@ namespace Protocol
 			return header;
 		}
 		
+		protected Header _parseServerHandshake(List<byte> buffer, ref int bufferUsed)
+		{
+			bufferUsed = 0;
+			if (buffer.Count == 0)
+			{
+				return null;
+			}
+
+			string request = ReadOneLine(buffer);
+			// check for valid http-header:
+			Regex r = new Regex("^HTTP/1.1 .*$");
+			Match matches = r.Match(request);
+			if (!matches.Success)
+			{
+				throw new Exception();
+			}
+
+			// check for valid application:
+			bufferUsed += request.Length + 2;
+			Header header = new Header(matches.Groups[0].ToString());
+
+			// generate headers array:
+			string line;
+			r = new Regex("^(\\S+): (.*)$");
+			while ((line = ReadOneLine(buffer, bufferUsed)) != null)
+			{
+				bufferUsed += line.Length + 2;
+				line = line.TrimStart();
+				matches = r.Match(line);
+				if (matches.Success)
+				{
+					header.Set(matches.Groups[1].ToString(), matches.Groups[2].ToString());
+				}
+			}
+
+			return header;
+		}
+		
 		protected Header _createResponseHandshake(Header header)
 		{
 			string secKey = header.Get("sec-websocket-key");
 			string secAccept = "";
 			{
-				var rawAnswer = secKey.Trim() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-				var hasher = SHA1.Create();
-				secAccept = Convert.ToBase64String(hasher.ComputeHash(Encoding.UTF8.GetBytes(rawAnswer)));
+				var rawAnswer = secKey.Trim() + rfc_guid;
+				secAccept = Convert.ToBase64String(SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(rawAnswer)));
 			}
 
 			Header h = new Header("HTTP/1.1 101 Switching Protocols");
@@ -304,8 +577,42 @@ namespace Protocol
 			{
 				h.Set("Sec-WebSocket-Protocol", header.URL.Substring(1));
 			}
-			
+
 			return h;
+		}
+		
+		protected Header _createRequestHandshake(string url, out string expectedAccept)
+		{
+			Regex regex = new Regex(@"^([^:]+)://([^/:]+)(:(\d+))?(/.*)?$");
+			Match mtch = regex.Match(url.Trim());
+			if (!mtch.Success)
+			{
+				throw new Exception ("Invalid URL: " + url);
+			}
+
+			string protocol = mtch.Groups[1].Value;
+			string server = mtch.Groups[2].Value;
+			string port = mtch.Groups[4].Value;
+			string path = mtch.Groups[5].Value;
+
+			string secKey = Convert.ToBase64String(Encoding.ASCII.GetBytes(Guid.NewGuid().ToString().Substring(0, 16)));
+			expectedAccept = Convert.ToBase64String(SHA1.Create().ComputeHash(Encoding.ASCII.GetBytes(secKey + rfc_guid)));
+
+			Header header = new Header(String.Format("GET {0} HTTP/1.1", string.IsNullOrEmpty(path) ? "/" : path));
+			header.Set("Upgrade", "WebSocket");
+			header.Set("Connection", "Upgrade");
+			header.Set("Sec-WebSocket-Version", "13");
+			header.Set("Sec-WebSocket-Key", secKey);
+			if (string.IsNullOrEmpty(port))
+			{
+				header.Set("Host", server);
+			}
+			else
+			{
+				header.Set("Host", server + ":" + port);
+			}
+			header.Set("Origin", server);
+			return header;
 		}
 	}
 }

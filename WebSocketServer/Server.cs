@@ -25,6 +25,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Net;
 using Protocol;
+using System.Threading.Tasks;
 using System.Collections;
 using System.Security.Cryptography.X509Certificates;
 using System.Linq;
@@ -40,6 +41,8 @@ namespace WebSocketServer
 		private bool _checkOrigin = false;
 		private Draft[] drafts;
 		private bool exitEvent = false;
+        private ConcurrentDictionary<IConnection, DateTime> lastPongs = new ConcurrentDictionary<IConnection, DateTime>();
+        private Thread pingPongThread;
 		
 		public Draft[] Drafts
 		{
@@ -67,6 +70,57 @@ namespace WebSocketServer
 			drafts[0] = new Draft10();
 			drafts[1] = new Draft17();
 		}
+
+        public void Ping(Frame f)
+        {
+            f.Connection.Send(new Frame(Frame.OpCodeType.Pong));
+        }
+
+        public void Pong(Frame f)
+        {
+#if LOG_PP
+            logger.log("Pong recieved for: " + f.Connection.IP.ToString());
+#endif
+            DateTime previousTime = DateTime.Now;
+            lastPongs.TryGetValue(f.Connection, out previousTime);
+            lastPongs.TryUpdate(f.Connection, DateTime.Now, previousTime);
+        }
+
+        private void keepingConnectionAliveWithPingPong()
+        {
+			double PongMaxWaitMiliSec = 5000.0;
+			int PingPongThreadSleepMiliSec = 1000;
+            while (true)
+            {
+                List<IConnection> toBeRemoved = new List<IConnection>();
+                foreach (KeyValuePair<IConnection, DateTime> kvp in lastPongs)
+                {
+					if ((DateTime.Now - kvp.Value).TotalMilliseconds > PongMaxWaitMiliSec)
+                    {
+                        toBeRemoved.Add(kvp.Key);
+                    }
+                }
+                foreach (IConnection c in toBeRemoved)
+                {
+                    c.Close();
+                }
+                lock (((ICollection)connections).SyncRoot)
+                {
+                    foreach (IConnection c in connections)
+                    {
+                        try
+                        {
+#if LOG_PP
+                            logger.log("Sending ping to: " + c.IP.ToString());
+#endif
+                            c.Send(new Frame(Frame.OpCodeType.Ping));
+                        }
+                        catch (Exception) {}
+                    }
+                }
+				Thread.Sleep(PingPongThreadSleepMiliSec);
+            }
+        }
 		
 		#region implemented abstract members of Base.IServer
 
@@ -248,6 +302,13 @@ namespace WebSocketServer
 				startSecureAccept();
 			}
 
+			bool doPingPong = true;
+            if (doPingPong)
+            {
+                pingPongThread = new Thread(keepingConnectionAliveWithPingPong);
+                pingPongThread.Start();
+            }
+
 			base.Start();
 		}
 
@@ -368,6 +429,13 @@ namespace WebSocketServer
 			{
 				tcpSecureListener.Stop();
 			}
+
+            if (pingPongThread != null)
+            {
+                pingPongThread.Abort();
+                pingPongThread = null;
+            }
+            lastPongs.Clear();
 		}
 
 		public override void OnData(Frame frame)
@@ -376,10 +444,13 @@ namespace WebSocketServer
 
 		public override void OnConnect(IConnection client)
 		{
+            lastPongs.TryAdd(client, DateTime.Now);
 		}
 
 		public override void OnDisconnect(IConnection client)
 		{
+            DateTime temp;
+            lastPongs.TryRemove(client, out temp);
 		}
 		#endregion
 	}

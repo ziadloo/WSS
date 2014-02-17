@@ -24,10 +24,10 @@ namespace Protocol
 {
 	public class Draft17 : Draft10
 	{
-		public override Header ParseHandshake(List<byte> buffer)
+		public override Header ParseClientRequestHandshake(List<byte> buffer)
 		{
 			int bufferUsed = 0;
-			Header h = _parseHandshake(buffer, ref bufferUsed);
+			Header h = _parseClientHandshake(buffer, ref bufferUsed);
 			string v = h.Get("Sec-WebSocket-Version");
 			int vv = Int32.Parse(v.Trim());
 			if (vv != 13)
@@ -38,11 +38,32 @@ namespace Protocol
 			return h;
 		}
 
-		public override byte[] CreateResponseHandshake(Header header)
+		public override byte[] CreateServerResponseHandshake(Header header)
 		{
 			Header h = _createResponseHandshake(header);
 			h.Set("Sec-WebSocket-Version", "13");
 			return h.ToBytes();
+		}
+
+		public override Header ParseServerResponseHandshake(List<byte> buffer)
+		{
+			int bufferUsed = 0;
+			Header h = _parseServerHandshake(buffer, ref bufferUsed);
+			string v = h.Get("Sec-WebSocket-Version");
+			int vv = Int32.Parse(v.Trim());
+			if (vv != 13)
+			{
+				throw new Exception();
+			}
+			buffer.RemoveRange(0, bufferUsed);
+			return h;
+		}
+
+		public override byte[] CreateClientRequestHandshake(string url, out string expectedAccept)
+		{
+			Header header = _createRequestHandshake(url, out expectedAccept);
+			header.Set("Sec-WebSocket-Version", "13");
+			return header.ToBytes();
 		}
 	}
 }
