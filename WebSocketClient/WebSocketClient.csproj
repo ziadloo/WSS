@@ -45,7 +45,7 @@
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <ProjectReference Include="..\Protocol\Protocol.csproj">
-      <Project>{3316E44A-3DD4-47EA-A185-1A623FE4DFBC}</Project>
+      <Project>{D39106F6-7181-45D9-819F-5C6611B753AA}</Project>
       <Name>Protocol</Name>
     </ProjectReference>
     <ProjectReference Include="..\Base\Base.csproj">
