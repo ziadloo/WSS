@@ -56,9 +56,5 @@
       <Project>{3F776841-48FB-4CCC-85AE-2271327823D1}</Project>
       <Name>WebSocketClient</Name>
     </ProjectReference>
-    <ProjectReference Include="..\JsonRpc\JsonRpc.csproj">
-      <Project>{266AB4B3-B5EE-4462-826B-A88804BEA399}</Project>
-      <Name>JsonRpc</Name>
-    </ProjectReference>
   </ItemGroup>
 </Project>
