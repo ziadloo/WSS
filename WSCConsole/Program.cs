@@ -7,7 +7,7 @@ namespace WSCConsole
 	{
 		public static void Main (string[] args)
 		{
-			WSSocket client = new WSSocket("ws://192.168.0.81:8181/EchoApplication", false);
+			WSSocket client = new WSSocket("ws://localhost:8181/EchoApplication", false);
 
 			client.OnOpen += delegate() {
 				Console.WriteLine ("Connection Opened");
@@ -19,7 +19,7 @@ namespace WSCConsole
 				Console.WriteLine("Received: " + message);
 			};
 
-			client.Open();
+			client.Open(false);
 
 			Console.WriteLine("Press Esc to exit...");
 

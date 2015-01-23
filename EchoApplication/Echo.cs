@@ -27,14 +27,16 @@ namespace EchoApplication
 	{
 		public Echo()
 		{
-			
 		}
-		
+
 		#region implemented abstract members of Base.Application
 		public override void OnData(Frame frame)
 		{
 			if (frame.OpCode == Frame.OpCodeType.Text)
 			{
+#if LOGGER
+				logger.log("Message recieved: " + frame.Message);
+#endif
 				frame.Connection.Send(frame);
 			}
 		}
