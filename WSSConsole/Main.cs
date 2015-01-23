@@ -19,15 +19,21 @@
 using System;
 using Base;
 using WebSocketServer;
+using System.Threading;
 
 namespace WSSConsole
 {
 	class MainClass : ILogger
 	{
-		public static void Main (string[] args)
+		public static void Main(string[] args)
 		{
 			MainClass main = new MainClass();
 			Server server = new Server(main);
+
+			var echo = new EchoApplication.Echo();
+			echo.SetLogger(main);
+			((IServer)server).AddApplication("EchoApplication", echo);
+
 			server.Start();
 			Console.WriteLine("Press Esc to exit...");
 			while (Console.ReadKey(true).Key != ConsoleKey.Escape);

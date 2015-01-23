@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Collections;
 using System.Threading.Tasks;
+using System.Runtime.Remoting.Messaging;
 
 namespace Base
 {
@@ -39,6 +40,17 @@ namespace Base
 		private ManualResetEvent connectionWorker_ExitSignal = new ManualResetEvent(false);
 		private AutoResetEvent connectionWorker_ProduceSignal = new AutoResetEvent(false);
 		private ManualResetEvent connectionWorker_DoneSignal = new ManualResetEvent(true);
+
+		protected IConnection CurrentConnection
+		{
+			set { CallContext.SetData("CurrentConnection", value); }
+			get { return (IConnection)CallContext.GetData("CurrentConnection"); }
+		}
+		protected Session CurrentSession
+		{
+			set { CallContext.SetData("CurrentSession", value); }
+			get { return (Session)CallContext.GetData("CurrentSession"); }
+		}
 
 		public string Version
 		{
@@ -62,8 +74,8 @@ namespace Base
 			connections = new List<IConnection>();
 			connectionsToBeAdded = new List<IConnection>();
 			connectionsToBeRemoved = new List<IConnection>();
-			connectionWorker_Eventhandlers [0] = connectionWorker_ExitSignal;
-			connectionWorker_Eventhandlers [1] = connectionWorker_ProduceSignal;
+			connectionWorker_Eventhandlers[0] = connectionWorker_ExitSignal;
+			connectionWorker_Eventhandlers[1] = connectionWorker_ProduceSignal;
 		}
 
 		public virtual void SetLogger(ILogger logger)
@@ -75,8 +87,8 @@ namespace Base
 		{
 			lock (((ICollection)connectionsToBeAdded).SyncRoot) {
 				if (!connectionsToBeAdded.Contains (client)) {
-					connectionsToBeAdded.Add (client);
-					connectionWorker_ProduceSignal.Set ();
+					connectionsToBeAdded.Add(client);
+					connectionWorker_ProduceSignal.Set();
 				}
 			}
 		}
@@ -111,7 +123,7 @@ namespace Base
 					lock (((ICollection)connectionsToBeRemoved).SyncRoot) {
 						foreach (IConnection c in connections) {
 							if (!connectionsToBeRemoved.Contains(c)) {
-								connectionsToBeRemoved.Add (c);
+								connectionsToBeRemoved.Add(c);
 							}
 						}
 					}
@@ -129,6 +141,8 @@ namespace Base
 
 		public void EnqueueIncomingFrame(Frame frame)
 		{
+			CurrentConnection = frame.Connection;
+			CurrentSession = (Session)CurrentConnection.Session;
             OnData(frame);
 		}
 
@@ -173,6 +187,8 @@ namespace Base
 						}
 					}
 					foreach (IConnection client in newConnections) {
+						CurrentConnection = client;
+						CurrentSession = client.Session;
 						OnConnect(client);
 					}
 				}
@@ -187,6 +203,8 @@ namespace Base
 						}
 					}
 					foreach (IConnection client in lostConnections) {
+						CurrentConnection = client;
+						CurrentSession = client.Session;
 						OnDisconnect(client);
 					}
 					foreach (IConnection client in lostConnections) {

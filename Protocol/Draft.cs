@@ -27,10 +27,12 @@ namespace Protocol
 	{
 		protected string ReadOneLine(List<byte> buffer, int start = 0)
 		{
-			if (buffer.Count - start < 2)
+			start = start < 0 ? 0 : start;
+			if (buffer == null || buffer.Count - start < 2)
 			{
 				return null;
 			}
+
 			int end = start;
 			for (int i=start+1; i<buffer.Count; i++)
 			{
@@ -40,7 +42,7 @@ namespace Protocol
 					break;
 				}
 			}
-			if (end == start)
+			if (end <= start)
 			{
 				return null;
 			}

@@ -34,6 +34,9 @@ namespace WebSocketServer
 	{
 		protected TcpClient socket;
 		protected NetworkStream socketStream;
+		private static int clientCounter = 0;
+		private int clientId = -1;
+		private object clientLock = new object();
 		protected bool connected = false;
 		protected Server server;
 		protected Application application;
@@ -42,12 +45,17 @@ namespace WebSocketServer
 		protected List<byte> buffer = new List<byte>();
 		protected byte[] message = new byte[4096];
 		protected object extra = null;
+		protected Session session = new Session();
 
 		public Connection(TcpClient socket, Server server)
 		{
 			this.socket = socket;
 			this.server = server;
 			socketStream = socket.GetStream();
+
+			lock (clientLock) {
+				clientId = ++clientCounter;
+			}
 				
 			startRead();
 		}
@@ -78,15 +86,7 @@ namespace WebSocketServer
 			catch (Exception ex)
 			{
 				((ILogger)server).error("Reading from client failed. Removing the client from list. Error message: " + ex.Message);
-
-				if (application != null)
-				{
-					application.RemoveConnection(this);
-				}
-				if (application != server)
-				{
-					server.RemoveConnection(this);
-				}
+				((IConnection)this).Close();
 			}
 		}
 
@@ -143,11 +143,11 @@ namespace WebSocketServer
 #endif
 							connected = true;
 							application.AddConnection(this);
-							server.AddConnection(this);
+//							server.AddConnection(this);
 
 							break;
 						}
-						catch
+						catch (Exception ex)
 						{
 						}
 					}
@@ -157,24 +157,25 @@ namespace WebSocketServer
 					Frame f;
 					while ((f = draft.ParseClientFrameBytes(buffer)) != null)
 					{
-                        f.Connection = this;
-                        if (f.OpCode == Frame.OpCodeType.Close)
-                        {
-                            ((IConnection)this).Close();
-                            break;
-                        }
-                        else if (f.OpCode == Frame.OpCodeType.Ping)
-                        {
-                            server.Ping(f);
-                        }
-                        else if (f.OpCode == Frame.OpCodeType.Pong)
-                        {
-                            server.Pong(f);
-                        }
-                        if (application != null)
-                        {
-                            application.EnqueueIncomingFrame(f);
-                        }
+						f.Connection = this;
+						if (f.OpCode == Frame.OpCodeType.Close)
+						{
+							((IConnection)this).Close();
+							break;
+						}
+						else if (f.OpCode == Frame.OpCodeType.Ping)
+						{
+							((IConnection)this).Send(new Frame(Frame.OpCodeType.Pong));
+						}
+						else if (f.OpCode == Frame.OpCodeType.Pong)
+						{
+							server.OnPonged(this);
+						}
+
+						if (application != null)
+						{
+							application.EnqueueIncomingFrame(f);
+						}
 					}
 				}
 			}
@@ -222,24 +223,18 @@ namespace WebSocketServer
 		{
 			try
 			{
-				byte[] b = draft.CreateServerFrameBytes(frame);
-				if (b != null)
-				{
-					socketStream.BeginWrite(b, 0, b.Length, null, null);
+				if (connected) {
+					byte[] b = draft.CreateServerFrameBytes(frame);
+					if (b != null)
+					{
+						socketStream.BeginWrite(b, 0, b.Length, null, null);
+					}
 				}
 			}
 			catch (Exception ex)
 			{
 				((ILogger)server).error("Writing to client failed. Removing the client from list. Error message: " + ex.Message);
-
-				if (application != null)
-				{
-					application.RemoveConnection(this);
-				}
-				if (application != server)
-				{
-					server.RemoveConnection(this);
-				}
+				((IConnection)this).Close();
 			}
 		}
 
@@ -256,6 +251,14 @@ namespace WebSocketServer
 			get
 			{
 				return ((IPEndPoint)(socket.Client.RemoteEndPoint)).Port;
+			}
+		}
+
+		int IConnection.ConnectionId
+		{
+			get
+			{
+				return clientId;
 			}
 		}
 
@@ -279,13 +282,13 @@ namespace WebSocketServer
 		{
 			get { return application; }
 		}
-
+		
 		IServer IConnection.Server
 		{
 			get { return server; }
 		}
 
-		void IConnection.Close()
+		void IConnection.Close(bool SayBye)
 		{
 			if (connected)
 			{
@@ -293,22 +296,38 @@ namespace WebSocketServer
 #if LOGGER
 				((ILogger)server).log("Connection is closed, "  + ((IConnection)this).IP.ToString());
 #endif
-				socket.Close();
-				if (application != null)
-				{
+				if (SayBye) {
+					try {
+						byte[] b = draft.CreateServerFrameBytes(new Frame(Frame.OpCodeType.Close));
+						socketStream.Write(b, 0, b.Length);
+					}
+					catch (Exception) {}
+				}
+
+				try {
+					socket.Close();
+				}
+				catch (Exception) {}
+
+				if (application != null) {
 					application.RemoveConnection(this);
 				}
-				if (application != server)
-				{
-					server.RemoveConnection(this);
-				}
+//				if (application != server) {
+//					server.RemoveConnection(this);
+//				}
 			}
 		}
-		
+
 		object IConnection.Extra
 		{
 			get { return extra; }
 			set { extra = value; }
+		}
+
+		Session IConnection.Session
+		{
+			get { return session; }
+			set { session = value; }
 		}
 		#endregion
 	}

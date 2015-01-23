@@ -48,17 +48,17 @@ namespace WebSocketServer
 			{
 				if (!authenticated)
 				{
-					bool clientCertificateRequired = false;
-					SslProtocols ssls = digestSslProtocols("ssl2 ssl3");
-					bool checkCertificateRevocation = true;
+					bool clientCertificateRequired = Config.Instance.GetValue("Server", "client_certificate_required", false);
+					SslProtocols ssls = digestSslProtocols(Config.Instance.GetValue("Server", "suppported_ssl_protocols", "ssl3"));
+					bool checkCertificateRevocation = Config.Instance.GetValue("Server", "check_certificate_revocation", true);
 					sslStream.BeginAuthenticateAsServer(
 						certificate
-						, clientCertificateRequired
-						, ssls
-						, checkCertificateRevocation
-						, handleAsyncAuthenticate
-						, sslStream
-					);
+                        , clientCertificateRequired
+                        , ssls
+                        , checkCertificateRevocation
+                    	, handleAsyncAuthenticate
+                        , sslStream
+                    );
 				}
 				else
 				{
@@ -92,17 +92,17 @@ namespace WebSocketServer
 		{
 			SslProtocols ssls = SslProtocols.None;
 			str = str.ToLower();
-
+			
 			if (str.Contains("ssl2"))
 			{
 				ssls |= SslProtocols.Ssl2;
 			}
-
+			
 			if (str.Contains("ssl3"))
 			{
 				ssls |= SslProtocols.Ssl3;
 			}
-
+			
 			if (str.Contains("tls"))
 			{
 				ssls |= SslProtocols.Tls;

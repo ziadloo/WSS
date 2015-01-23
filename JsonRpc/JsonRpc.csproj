@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Linux_Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{266AB4B3-B5EE-4462-826B-A88804BEA399}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>JsonRpc</RootNamespace>
+    <AssemblyName>JsonRpc</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Linux_Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Linux_Debug</OutputPath>
+    <DefineConstants>DEBUG;LOGGER;</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+    <CustomCommands>
+      <CustomCommands>
+        <Command type="AfterBuild" command="mkdir -p ${SolutionDir}/WSSDaemon/bin/${ProjectConfigName}/Applications" />
+        <Command type="AfterBuild" command="cp ${TargetFile} ${SolutionDir}/WSSDaemon/bin/${ProjectConfigName}/Applications" workingdir="" />
+      </CustomCommands>
+    </CustomCommands>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Linux_Release|AnyCPU' ">
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Linux_Release</OutputPath>
+    <WarningLevel>4</WarningLevel>
+    <CustomCommands>
+      <CustomCommands>
+        <Command type="AfterBuild" command="mkdir -p ${SolutionDir}/WSSDaemon/bin/${ProjectConfigName}/Applications" />
+        <Command type="AfterBuild" command="cp ${TargetFile} ${SolutionDir}/WSSDaemon/bin/${ProjectConfigName}/Applications" workingdir="" />
+      </CustomCommands>
+    </CustomCommands>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Windows_Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Windows_Debug</OutputPath>
+    <DefineConstants>DEBUG;LOGGER;</DefineConstants>
+    <WarningLevel>4</WarningLevel>
+    <CustomCommands>
+      <CustomCommands>
+        <Command type="AfterBuild" command="&quot;${SolutionDir}\WindowsDeploy.bat&quot; &quot;${TargetFile}&quot; &quot;${SolutionDir}\WSSDaemon\bin\${ProjectConfigName}\Applications&quot;" />
+      </CustomCommands>
+    </CustomCommands>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Windows_Release|AnyCPU' ">
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Windows_Release</OutputPath>
+    <WarningLevel>4</WarningLevel>
+    <CustomCommands>
+      <CustomCommands>
+        <Command type="AfterBuild" command="&quot;${SolutionDir}\WindowsDeploy.bat&quot; &quot;${TargetFile}&quot; &quot;${SolutionDir}\WSSDaemon\bin\${ProjectConfigName}\Applications&quot;" />
+      </CustomCommands>
+    </CustomCommands>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\References\Newtonsoft.Json.dll</HintPath>
+      <Package>monodevelop</Package>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Server.cs" />
+    <Compile Include="Service.cs" />
+    <Compile Include="Smd.cs" />
+    <Compile Include="Response.cs" />
+    <Compile Include="Request.cs" />
+    <Compile Include="JsonRpcException.cs" />
+    <Compile Include="JsonRpcMethodAttribute.cs" />
+    <Compile Include="Client.cs" />
+    <Compile Include="Gateway.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+</Project>

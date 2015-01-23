@@ -5,6 +5,7 @@ using Protocol;
 using System.Net.Sockets;
 using Base;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace WebSocketClient
 {
@@ -15,6 +16,8 @@ namespace WebSocketClient
 		{
 			get { return connected; }
 		}
+
+		private ManualResetEvent closeSignal = new ManualResetEvent(false);
 
 		public delegate void OnOpenHandler();
 		private event OnOpenHandler _onOpen;
@@ -84,12 +87,12 @@ namespace WebSocketClient
 
 				socket = new System.Net.Sockets.Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 				socket.Connect(remoteEP);
-				
+
 				startReceive();
 				sendHandShake();
 			}
 		}
-		
+
 		public void Send(string message)
 		{
 			if (handshaked)
@@ -137,6 +140,7 @@ namespace WebSocketClient
 			{
 				OnClose();
 			}
+			closeSignal.Set();
 		}
 
 		private bool digestIncomingBuffer(byte[] _buffer)
@@ -146,7 +150,7 @@ namespace WebSocketClient
 				//the client has disconnected from the server
 				return false;
 			}
-			
+
 			//message has successfully been received
 			try
 			{
@@ -208,11 +212,11 @@ namespace WebSocketClient
 			catch
 			{
 			}
-			
+
 			return true;
 		}
 
-		public void Open()
+		public void Open(bool WaitForClose = true)
 		{
 			if (!connected)
 			{
@@ -225,9 +229,15 @@ namespace WebSocketClient
 
 				startReceive();
 				sendHandShake();
+				closeSignal.Reset();
+
+				if (WaitForClose)
+				{
+					closeSignal.WaitOne();
+				}
 			}
 		}
-	
+
 		public void Close()
 		{
 			try
@@ -235,8 +245,14 @@ namespace WebSocketClient
 				connected = false;
 				socket.Close();
 				socket = null;
+				closeSignal.Set();
 			}
 			catch {}
+		}
+
+		public void WaitForClose()
+		{
+			closeSignal.WaitOne();
 		}
 	}
 }

@@ -57,6 +57,7 @@
     <Compile Include="IServer.cs" />
     <Compile Include="Session.cs" />
     <Compile Include="STA_INIFile.cs" />
+    <Compile Include="Config.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

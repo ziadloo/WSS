@@ -21,6 +21,8 @@ using System.ServiceProcess;
 using System.Diagnostics;
 using Base;
 using WebSocketServer;
+using Mono.Unix.Native;
+using System.IO;
 
 namespace WSSDaemon
 {
@@ -52,6 +54,10 @@ namespace WSSDaemon
 			this.eventLog = new EventLog();
 			this.eventLog.Source = this.ServiceName;
 			this.eventLog.Log = LOG_NAME;
+			if (MainClass.IsLinux)
+			{
+				this.eventLog.EntryWritten += new EntryWrittenEventHandler(HandleEvent);
+			}
 
 			((System.ComponentModel.ISupportInitialize)(this.eventLog)).BeginInit();
 			if (!EventLog.SourceExists(this.eventLog.Source))
@@ -80,23 +86,95 @@ namespace WSSDaemon
 		#region ILogger implementation
 		void ILogger.log(string msg)
 		{
-			eventLog.WriteEntry(msg, EventLogEntryType.Information);
+			if (Config.Instance.GetValue("Server", "enable_logging", true))
+			{
+				eventLog.WriteEntry(msg, EventLogEntryType.Information);
+			}
 		}
 
 		void ILogger.warn(string msg)
 		{
-			eventLog.WriteEntry(msg, EventLogEntryType.Warning);
+			if (Config.Instance.GetValue("Server", "enable_logging", true))
+			{
+				eventLog.WriteEntry(msg, EventLogEntryType.Warning);
+			}
 		}
 
 		void ILogger.error(string msg)
 		{
-			eventLog.WriteEntry(msg, EventLogEntryType.Error);
+			if (Config.Instance.GetValue("Server", "enable_logging", true))
+			{
+				eventLog.WriteEntry(msg, EventLogEntryType.Error);
+			}
 		}
 
 		void ILogger.info(string msg)
 		{
-			eventLog.WriteEntry(msg, EventLogEntryType.Information);
+			if (Config.Instance.GetValue("Server", "enable_logging", true))
+			{
+				eventLog.WriteEntry(msg, EventLogEntryType.Information);
+			}
 		}
 		#endregion
+
+		public static bool IsLinux
+		{
+			get
+			{
+				int p = (int) Environment.OSVersion.Platform;
+				return (p == 4) || (p == 6) || (p == 128);
+			}
+		}
+
+		private StreamWriter logFile;
+		private string logFilename;
+		private object logLock = new object();
+		private void HandleEvent(object sender, EntryWrittenEventArgs e) 
+		{
+			if (Config.Instance.GetValue("Server", "enable_logging", true))
+			{
+				if (Config.Instance.GetValue("Server", "use_system_log", false)) {
+					switch (e.Entry.EntryType)
+					{
+						case EventLogEntryType.Information:
+						case EventLogEntryType.SuccessAudit:
+							Syscall.syslog(SyslogFacility.LOG_USER, SyslogLevel.LOG_INFO, e.Entry.Message); 
+							break;
+
+						case EventLogEntryType.Warning:
+							Syscall.syslog(SyslogFacility.LOG_USER, SyslogLevel.LOG_WARNING, e.Entry.Message); 
+							break;
+
+						case EventLogEntryType.Error:
+						case EventLogEntryType.FailureAudit:
+							Syscall.syslog(SyslogFacility.LOG_USER, SyslogLevel.LOG_ERR, e.Entry.Message); 
+							break;
+					}
+				}
+				else
+				{
+					string folder = Config.Instance.GetValue("Server", "log_path", "./logs");
+					if (!System.IO.Directory.Exists(folder))
+					{
+						System.IO.Directory.CreateDirectory(folder);
+					}
+					lock (logLock)
+					{
+						string today = DateTime.Today.ToString("yyyy_MM_dd") + ".log";
+						if (logFile == null || logFilename != today)
+						{
+							if (logFile != null)
+							{
+								logFile.Close();
+							}
+							logFilename = today;
+							logFile = File.AppendText(folder + Path.DirectorySeparatorChar + today);
+						}
+						logFile.WriteLine("[" + e.Entry.EntryType.ToString() + "] " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " - " + e.Entry.Message);
+						logFile.Flush();
+					}
+				}
+			}
+		} 
 	}
 }

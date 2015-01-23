@@ -41,8 +41,8 @@ namespace WebSocketServer
 		private bool _checkOrigin = false;
 		private Draft[] drafts;
 		private bool exitEvent = false;
-        private ConcurrentDictionary<IConnection, DateTime> lastPongs = new ConcurrentDictionary<IConnection, DateTime>();
-        private Thread pingPongThread;
+		private ConcurrentDictionary<IConnection, DateTime> lastPongs = new ConcurrentDictionary<IConnection, DateTime>();
+		private Thread pingPongThread;
 		
 		public Draft[] Drafts
 		{
@@ -53,7 +53,7 @@ namespace WebSocketServer
 		{
 			get { return _checkOrigin; }
 		}
-		
+
 		public bool checkOrigin(string origin)
 		{
 			return true;
@@ -71,57 +71,41 @@ namespace WebSocketServer
 			drafts[1] = new Draft17();
 		}
 
-        public void Ping(Frame f)
-        {
-            f.Connection.Send(new Frame(Frame.OpCodeType.Pong));
-        }
-
-        public void Pong(Frame f)
-        {
+		public void OnPonged(IConnection connection)
+		{
 #if LOG_PP
-            logger.log("Pong recieved for: " + f.Connection.IP.ToString());
+			logger.log("Pong recieved for: " + f.Connection.IP.ToString());
 #endif
-            DateTime previousTime = DateTime.Now;
-            lastPongs.TryGetValue(f.Connection, out previousTime);
-            lastPongs.TryUpdate(f.Connection, DateTime.Now, previousTime);
-        }
+			DateTime previousTime = DateTime.Now;
+			lastPongs.TryGetValue(connection, out previousTime);
+			lastPongs.TryUpdate(connection, DateTime.Now, previousTime);
+		}
 
-        private void keepingConnectionAliveWithPingPong()
-        {
-			double PongMaxWaitMiliSec = 5000.0;
-			int PingPongThreadSleepMiliSec = 1000;
-            while (true)
-            {
-                List<IConnection> toBeRemoved = new List<IConnection>();
-                foreach (KeyValuePair<IConnection, DateTime> kvp in lastPongs)
-                {
-					if ((DateTime.Now - kvp.Value).TotalMilliseconds > PongMaxWaitMiliSec)
-                    {
-                        toBeRemoved.Add(kvp.Key);
-                    }
-                }
-                foreach (IConnection c in toBeRemoved)
-                {
-                    c.Close();
-                }
-                lock (((ICollection)connections).SyncRoot)
-                {
-                    foreach (IConnection c in connections)
-                    {
-                        try
-                        {
-#if LOG_PP
-                            logger.log("Sending ping to: " + c.IP.ToString());
-#endif
-                            c.Send(new Frame(Frame.OpCodeType.Ping));
-                        }
-                        catch (Exception) {}
-                    }
-                }
-				Thread.Sleep(PingPongThreadSleepMiliSec);
-            }
-        }
-		
+		private void keepingConnectionAliveWithPingPong()
+		{
+			while (true)
+			{
+				List<IConnection> toBeRemoved = new List<IConnection>();
+				foreach (KeyValuePair<IConnection, DateTime> kvp in lastPongs)
+				{
+					if ((DateTime.Now - kvp.Value).TotalMilliseconds > Config.Instance.GetValue("Server", "PongMaxWaitMiliSec", 5000))
+					{
+						toBeRemoved.Add(kvp.Key);
+					}
+				}
+				foreach (IConnection c in toBeRemoved)
+				{
+					c.Close();
+				}
+
+				foreach (KeyValuePair<string, Application> kvp in applications) {
+					kvp.Value.PingConnections();
+				}
+
+				Thread.Sleep(Config.Instance.GetValue("Server", "PingPongThreadSleepMiliSec", 1000));
+			}
+		}
+
 		#region implemented abstract members of Base.IServer
 
 		void IServer.AddApplication(string name, Application app)
@@ -134,7 +118,7 @@ namespace WebSocketServer
 		void IServer.ReloadApplications()
 		{
 			string serverFolder = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-			string applicationfolder = Path.Combine(serverFolder, "Applications");
+			string applicationfolder = Path.Combine(serverFolder, Config.Instance.GetValue("Server", "plugin_folder_name", "Applications"));
 
 			List<string> foundApplications = new List<string>();
 			if (Directory.Exists(applicationfolder))
@@ -143,6 +127,7 @@ namespace WebSocketServer
 				string[] dllpaths = Directory.GetFiles(applicationfolder, "*.dll");
 				foreach (string dllpath in dllpaths)
 				{
+					logger.log("Found dll: " + dllpath);
 					Assembly dll = Assembly.LoadFile(dllpath);
 					Type[] types = dll.GetExportedTypes();
 					foreach (Type type in types)
@@ -152,27 +137,32 @@ namespace WebSocketServer
 							string name = Path.GetFileNameWithoutExtension(dllpath);
 							foundApplications.Add(name);
 
-							Application oldApp = null;
-							if (!applications.TryGetValue(name, out oldApp))
-							{
+							try {
+								Application oldApp = null;
+								logger.log("Trying to instantiate application: " + name);
 								Application obj = (Application)Activator.CreateInstance(type);
-								obj.SetLogger(logger);
-								obj.Server = (IServer)this;
-								applications.TryAdd(name, obj);
-							}
-							else
-							{
-								Application obj = (Application)Activator.CreateInstance(type);
-								if (obj.Version != oldApp.Version)
+								if (!applications.TryGetValue(name, out oldApp))
 								{
 									obj.SetLogger(logger);
-									applications[name] = obj;
-									if (oldApp.IsStarted)
+									obj.Server = (IServer)this;
+									applications.TryAdd(name, obj);
+								}
+								else
+								{
+									if (obj.Version != oldApp.Version)
 									{
-										oldApp.Stop();
-										obj.Start();
+										obj.SetLogger(logger);
+										applications[name] = obj;
+										if (oldApp.IsStarted)
+										{
+											oldApp.Stop();
+											obj.Start();
+										}
 									}
 								}
+							}
+							catch (Exception ex) {
+								logger.error("Failed to add application: " + name + ", error message: " + ex.Message);
 							}
 							break;
 						}
@@ -201,7 +191,7 @@ namespace WebSocketServer
 
 		void IServer.ReloadConfig()
 		{
-			//Reload config if you have any
+			Config.Reload();
 		}
 
 		void IServer.Reload()
@@ -209,7 +199,7 @@ namespace WebSocketServer
 			((IServer)this).ReloadApplications();
 			((IServer)this).ReloadConfig();
 		}
-		
+
 		Application IServer.GetApplication(string path)
 		{
 			Application app = null;
@@ -275,39 +265,56 @@ namespace WebSocketServer
 		{
 			foreach (var pair in applications)
 			{
-				pair.Value.Start();
+				try
+				{
+					pair.Value.Start();
+					logger.log("#WSS# Application `" + pair.Key + "` is started successfully.");
+				}
+				catch (Exception ex)
+				{
+					logger.error(ex.Message);
+					logger.error("Couldn't start the application: `" + pair.Key + "`.");
+				}
 			}
 			exitEvent = false;
 
-			bool nonsecure = true;
+			bool nonsecure = Config.Instance.GetValue("Server", "nonsecure_connection", false);
 			if (nonsecure)
 			{
-				tcpListener = new TcpListener(IPAddress.Any, 8080);
+				if (Config.Instance.GetValue("Server", "nonsecure_host", "localhost") == "*")
+				{
+					tcpListener = new TcpListener(IPAddress.Any, Config.Instance.GetValue("Server", "nonsecure_port", 8080));
+				}
+				else
+				{
+					IPHostEntry host = Dns.GetHostEntry(Config.Instance.GetValue("Server", "nonsecure_host", "localhost"));
+					tcpListener = new TcpListener(host.AddressList[0], Config.Instance.GetValue("Server", "nonsecure_port", 8080));
+				}
 				tcpListener.Start();
-			}
-
-			bool secure = true;
-			if (secure)
-			{
-				tcpSecureListener = new TcpListener(IPAddress.Any, 8081);
-				tcpSecureListener.Start();
-			}
-
-			if (nonsecure)
-			{
 				startAccept();
 			}
+
+			bool secure = Config.Instance.GetValue("Server", "secure_connection", true);
 			if (secure)
 			{
+				if (Config.Instance.GetValue("Server", "secure_host", "localhost") == "*")
+				{
+					tcpSecureListener = new TcpListener(IPAddress.Any, Config.Instance.GetValue("Server", "secure_port", 8080));
+				}
+				else
+				{
+					IPHostEntry host = Dns.GetHostEntry(Config.Instance.GetValue("Server", "secure_host", "localhost"));
+					tcpSecureListener = new TcpListener(host.AddressList[0], Config.Instance.GetValue("Server", "secure_port", 8081));
+				}
+				tcpSecureListener.Start();
 				startSecureAccept();
 			}
 
-			bool doPingPong = true;
-            if (doPingPong)
-            {
-                pingPongThread = new Thread(keepingConnectionAliveWithPingPong);
-                pingPongThread.Start();
-            }
+			if (Config.Instance.GetValue("Server", "PingPongClients", 1) == 1)
+			{
+				pingPongThread = new Thread(keepingConnectionAliveWithPingPong);
+				pingPongThread.Start();
+			}
 
 			base.Start();
 		}
@@ -323,12 +330,7 @@ namespace WebSocketServer
 			}
 			catch (Exception ex)
 			{
-				int count = 0;
-				lock (((ICollection)connections).SyncRoot)
-				{
-					count = connections.Count;
-				}
-				logger.error("Begining accepting a client failed. Number of connections: " + count.ToString() + ". Error message: " + ex.Message);
+				logger.error("Begining accepting a client failed. Error message: " + ex.Message);
 			}
 		}
 
@@ -348,15 +350,10 @@ namespace WebSocketServer
 			}
 			catch (Exception ex)
 			{
-				int count = 0;
-				lock (((ICollection)connections).SyncRoot)
-				{
-					count = connections.Count;
-				}
-				logger.error("Accepting a client failed. Number of connections: " + count.ToString() + ". Error message: " + ex.Message);
+				logger.error("Accepting a client failed. Error message: " + ex.Message);
 			}
 		}
-		
+
 		private void startSecureAccept()
 		{
 			try
@@ -368,12 +365,7 @@ namespace WebSocketServer
 			}
 			catch (Exception ex)
 			{
-				int count = 0;
-				lock (((ICollection)connections).SyncRoot)
-				{
-					count = connections.Count;
-				}
-				logger.error("Begining accepting a client failed. Number of connections: " + count.ToString() + ". Error message: " + ex.Message);
+				logger.error("Begining accepting a client failed. Error message: " + ex.Message);
 			}
 		}
 
@@ -387,8 +379,8 @@ namespace WebSocketServer
 					TcpClient client = tcpSecureListener.EndAcceptTcpClient(res);
 					if (client != null)
 					{
-						string certificate_filename = "certificate.pfx";
-						string certification_password = "1234";
+						string certificate_filename = Config.Instance.GetValue("Server", "certification_filename", "certificate.cer");
+						string certification_password = Config.Instance.GetValue("Server", "certification_password", "1234");
 						X509Certificate2 x509 = new X509Certificate2(certificate_filename, certification_password);
 						new SecureConnection(client, this, x509);
 					}
@@ -396,31 +388,29 @@ namespace WebSocketServer
 			}
 			catch (Exception ex)
 			{
-				int count = 0;
-				lock (((ICollection)connections).SyncRoot)
-				{
-					count = connections.Count;
-				}
-				logger.error("Accepting a client failed. Number of connections: " + count.ToString() + ". Error message: " + ex.Message);
+				logger.error("Accepting a client failed. Error message: " + ex.Message);
 			}
 		}
 
 		public override void Stop()
 		{
-			lock (((ICollection)connections).SyncRoot)
-			{
-				List<IConnection> cs = new List<IConnection>(connections);
-				foreach (IConnection con in cs)
-				{
-					con.Close();
-				}
-			}
 			foreach (var pair in applications)
 			{
-				pair.Value.Stop();
+				try
+				{
+					pair.Value.Stop();
+					logger.log("#WSS# Application `" + pair.Key + "` is stopped successfully.");
+				}
+				catch (Exception ex)
+				{
+					logger.error(ex.Message);
+					logger.error("Couldn't stop the application: `" + pair.Key + "`.");
+				}
 			}
 			exitEvent = true;
+
 			base.Stop();
+
 			if (tcpListener != null)
 			{
 				tcpListener.Stop();
@@ -430,12 +420,12 @@ namespace WebSocketServer
 				tcpSecureListener.Stop();
 			}
 
-            if (pingPongThread != null)
-            {
-                pingPongThread.Abort();
-                pingPongThread = null;
-            }
-            lastPongs.Clear();
+			if (pingPongThread != null)
+			{
+				pingPongThread.Abort();
+				pingPongThread = null;
+			}
+			lastPongs.Clear();
 		}
 
 		public override void OnData(Frame frame)
@@ -444,13 +434,13 @@ namespace WebSocketServer
 
 		public override void OnConnect(IConnection client)
 		{
-            lastPongs.TryAdd(client, DateTime.Now);
+			lastPongs.TryAdd(client, DateTime.Now);
 		}
 
 		public override void OnDisconnect(IConnection client)
 		{
-            DateTime temp;
-            lastPongs.TryRemove(client, out temp);
+			DateTime temp;
+			lastPongs.TryRemove(client, out temp);
 		}
 		#endregion
 	}

@@ -10,7 +10,7 @@ using other open source projects (like [Alchemy](https://github.com/Olivine-Labs
 project as simple as possible. WSS's design is inspired by the design of project
 [php-websocket](https://github.com/nicokaiser/php-websocket) which means it lets you develop your own applications and
 introduce them to the server without the need of recompiling it, thanks to reflection. Right now it supports two versions
-of the WebSocket protocol including hybi-10 and byhi-17 (RFC 6455). Some of the code to encode and decode the protocol has
+of the WebSocket protocol including hybi-10 and hybi-17 (RFC 6455). Some of the code to encode and decode the protocol has
 been borrowed from the mentioned projects and also [Java-WebSocket](https://github.com/TooTallNate/Java-WebSocket).
 
 How to use:
