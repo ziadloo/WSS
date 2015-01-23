@@ -24,13 +24,15 @@ namespace Base
 	{
 		string IP { get; }
 		int Port { get; }
+		int ConnectionId { get; }
 		bool Connected { get; }
 		bool IsABridge { get; }
 		Application Application { get; }
 		IServer Server { get; }
 		void Send(Frame frame);
-		void Close();
+		void Close(bool SayBye = true);
 		object Extra { get; set; }
+		Session Session { get; set; }
 	}
 }
 

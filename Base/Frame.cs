@@ -63,22 +63,22 @@ namespace Base
 		{
 			get { return opCode; }
 		}
-
+		
 		public Frame.FinType Fin
 		{
 			get; set;
 		}
-
+		
 		public Frame.RsvType Rsv1
 		{
 			get; set;
 		}
-
+		
 		public Frame.RsvType Rsv2
 		{
 			get; set;
 		}
-
+		
 		public Frame.RsvType Rsv3
 		{
 			get; set;

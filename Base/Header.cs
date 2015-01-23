@@ -74,7 +74,7 @@ namespace Base
 				cookies.Add(name, value);
 			}
 		}
-
+		
 		public string GetCookie(string name)
 		{
 			if (cookies.ContainsKey(name))
