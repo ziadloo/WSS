@@ -22,7 +22,7 @@ you can run the server as a Console application. Pressing the Esc will terminate
 In production, you should run the server as a Daemon (in Linux) or a Service (in Windows). Please refer to the appropriate
 section in this file in order to learn how to do this.
 
-Installing the project as a Daemon in Lunix:
+Installing the project as a Daemon in Linux:
 --------------------------------------------
 
 	0. For these steps to work you will need "mono-service", so install that first.
